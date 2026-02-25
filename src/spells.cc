@@ -10,8 +10,8 @@
 // Internal storage; not visible outside this translation unit.
 TSpellList SpellList[MAX_SPELLS];
 
-// Copy of the syllable table that was previously embedded in magic.cc.
-static const char SpellSyllable[51][6] = {
+// Spell syllable table used for spell word parsing and display.
+const char SpellSyllable[51][6] = {
     "",
     "al",
     "ad",

@@ -3650,6 +3650,12 @@ static void RuneSpell(uint32 CreatureID, int SpellNr){
 		throw ERROR;
 	}
 
+	const TSpellList *Spell = SpellsGet(SpellNr);
+	if(Spell == NULL){
+		error("RuneSpell: Spell %d existiert nicht.\n", SpellNr);
+		throw ERROR;
+	}
+
 	uint8 RuneGr = Spell->RuneGr;
 	uint8 RuneNr = Spell->RuneNr;
 	int ManaPoints = Spell->Mana;
@@ -3790,7 +3796,8 @@ static void GetSpellString(int SpellNr, char *Text){
 		return;
 	}
 
-	TSpellList *Spell = &SpellList[SpellNr];
+	const TSpellList *Spell = SpellsGet(SpellNr);
+	if(Spell == NULL) return;
 	for(int i = 0; i < NARRAY(Spell->Syllable); i += 1){
 		const char *Syllable = SpellSyllable[Spell->Syllable[i]];
 		if(Syllable[0] == 0){
@@ -3828,6 +3835,7 @@ void GetMagicItemDescription(Object Obj, char *SpellString, int *MagicLevel){
 		return;
 	}
 
+	const TSpellList *Spell = SpellsGet(SpellNr);
 	GetSpellString(SpellNr, SpellString);
 	*MagicLevel = (int)Spell->RuneLevel;
 }
@@ -3854,6 +3862,8 @@ void GetSpellbook(uint32 CharacterID, char *Buffer){
 	for(int SpellNr = 0;
 			SpellNr < NARRAY(SpellList);
 			SpellNr += 1){
+		const TSpellList *Spell = SpellsGet(SpellNr);
+		if(Spell == NULL) continue;
 		int Level = (int)Spell->Level;
 		if(MaxLevel < Level){
 			MaxLevel = Level;
@@ -3866,8 +3876,8 @@ void GetSpellbook(uint32 CharacterID, char *Buffer){
 		for(int SpellNr = 0;
 				SpellNr < NARRAY(SpellList);
 				SpellNr += 1){
-			TSpellList *Spell = &SpellList[SpellNr];
-			if((int)Spell->Level != Level || !Player->SpellKnown(SpellNr)){
+			const TSpellList *Spell = SpellsGet(SpellNr);
+			if(Spell == NULL || (int)Spell->Level != Level || !Player->SpellKnown(SpellNr)){
 				continue;
 			}
 
@@ -3912,6 +3922,8 @@ int GetSpellLevel(int SpellNr){
 		return 1;
 	}
 
+	const TSpellList *Spell = SpellsGet(SpellNr);
+	if(Spell == NULL) return 1;
 	return (int)Spell->Level;
 }
 

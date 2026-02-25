@@ -48,6 +48,9 @@ constexpr int MAX_SPELLS = 256;
 // the migration incremental and avoids editing hundreds of call sites.
 extern TSpellList SpellList[MAX_SPELLS];
 
+// Spell syllable reference table (indexed by syllable number from 0-50).
+extern const char SpellSyllable[51][6];
+
 // Initialise the global spell list by reading `dat/spells.dat`.  This
 // must be called before any other spells-related function; it is
 // triggered by `InitMagic()` during server startup.  Repeated calls
