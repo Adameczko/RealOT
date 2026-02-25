@@ -4544,22 +4544,33 @@ static void InitSpellsFromFile(void){
 			CurrentSpell->Param2 = Script.readNumber();
 		}else if(strcmp(Identifier, "words") == 0){
 			Script.readSymbol('{');
-
+			
 			int SyllableCount = 0;
-			do{
-				const char *Word = Script.readIdentifier();
+			
+			while(true){
+				Script.nextToken();
+
+				if(Script.Token == SPECIAL){
+					if(Script.getSpecial() == '}')
+						break;
+					else
+						Script.error("unexpected special char in words block");
+				}
+
+				if(Script.Token != IDENTIFIER)
+					Script.error("identifier expected in words block");
+
+				const char *Word = Script.getIdentifier();
+
 				int SyllableNr = FindSpellSyllable(Word);
-				if(SyllableNr <= 0){
+				if(SyllableNr <= 0)
 					Script.error("unknown spell syllable");
-				}
 
-				if(SyllableCount >= (int)NARRAY(CurrentSpell->Syllable)){
+				if(SyllableCount >= (int)NARRAY(CurrentSpell->Syllable))
 					Script.error("too many syllables in spell");
-				}
 
-				CurrentSpell->Syllable[SyllableCount] = (uint8)SyllableNr;
-				SyllableCount += 1;
-			}while(Script.readSpecial() != '}');
+				CurrentSpell->Syllable[SyllableCount++] = (uint8)SyllableNr;
+			}
 		}else if(strcmp(Identifier, "comment") == 0){
 			CurrentSpell->Comment = AddStaticString(Script.readString());
 		}else{
