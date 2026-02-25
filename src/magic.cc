@@ -4107,6 +4107,8 @@ void UseMagicItem(uint32 CreatureID, Object Obj, Object Dest){
 		}
 	}
 
+	const TSpellList *Spell = SpellsGet(SpellNr);
+
 	try{
 		switch(SpellNr){
 			case 4:{
