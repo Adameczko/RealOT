@@ -5,31 +5,14 @@
 #include "operate.hh"
 #include "writer.hh"
 #include "script.hh"
+#include "spells.hh"
+
+// legacy compatibility: most of the code still calls the old helper names
+#define GetSpellEffect SpellsGetEffect
+#define GetSpellAnimation SpellsGetAnimation
 
 #include <fstream>
 #include <sstream>
-
-struct TSpellList {
-	uint8 Syllable[MAX_SPELL_SYLLABLES];
-	uint8 RuneGr;
-	uint8 RuneNr;
-	const char *Comment;
-	uint16 Level;
-	uint16 RuneLevel;
-	uint16 Flags;
-	int Mana;
-	int SoulPoints;
-	int Amount;
-
-	// Optional extra parameters for data-driven tuning of spell effects.
-	// These are interpreted per-spell in the switch statements in
-	// `CastSpell` and `UseMagicItem`. When zero, the hardcoded legacy
-	// defaults in code are used.
-	int Param1;
-	int Param2;
-	int Param3;
-	int Param4;
-};
 
 struct TCircle {
 	int x[32];
@@ -37,76 +20,7 @@ struct TCircle {
 	int Count;
 };
 
-static TSpellList SpellList[256];
 static TCircle Circle[10];
-
-static const char SpellSyllable[51][6] = {
-	"",
-	"al",
-	"ad",
-	"ex",
-	"ut",
-	"om",
-	"para",
-	"ana",
-	"evo",
-	"ori",
-	"mort",
-	"lux",
-	"liber",
-	"vita",
-	"flam",
-	"pox",
-	"hur",
-	"moe",
-	"ani",
-	"ina",
-	"eta",
-	"amo",
-	"hora",
-	"gran",
-	"cogni",
-	"res",
-	"mas",
-	"vis",
-	"som",
-	"aqua",
-	"frigo",
-	"tera",
-	"ura",
-	"sio",
-	"grav",
-	"ito",
-	"pan",
-	"vid",
-	"isa",
-	"iva",
-	"con",
-	"",
-	"",
-	"",
-	"",
-	"",
-	"",
-	"",
-	"",
-	"",
-	"",
-};
-
-static int FindSpellSyllable(const char *Name){
-	if(Name == NULL || Name[0] == 0){
-		return -1;
-	}
-
-	for(int i = 0; i < NARRAY(SpellSyllable); i += 1){
-		if(strcmp(SpellSyllable[i], Name) == 0){
-			return i;
-		}
-	}
-
-	return -1;
-}
 
 static bool IsAggressionValid(TCreature *Actor, TCreature *Victim){
 	ASSERT(Actor != NULL && Victim != NULL);
@@ -129,6 +43,8 @@ static bool IsAggressionValid(TCreature *Actor, TCreature *Victim){
 
 	return true;
 }
+
+
 
 // TImpact
 // =============================================================================
@@ -652,13 +568,12 @@ void CheckAccount(TCreature *Actor, int SpellNr){
 		throw ERROR;
 	}
 
-	// TODO(fusion): Why is this the only function that checks the spell number?
-	if(SpellNr < 1 || SpellNr >= NARRAY(SpellList)){
+	if(!SpellsValid(SpellNr)){
 		error("CheckAccount: Ungültige Spruchnummer %d.\n", SpellNr);
 		throw ERROR;
 	}
 
-	if(Actor->Type == PLAYER && (SpellList[SpellNr].Flags & 2) != 0
+	if(Actor->Type == PLAYER && (SpellsGet(SpellNr)->Flags & 2) != 0
 			&& !CheckRight(Actor->ID, PREMIUM_ACCOUNT)){
 		throw NOPREMIUMACCOUNT;
 	}
@@ -677,7 +592,7 @@ void CheckLevel(TCreature *Actor, int SpellNr){
 			throw ERROR;
 		}
 
-		if(Level->Get() < SpellList[SpellNr].Level){
+		if(Level->Get() < SpellsGet(SpellNr)->Level){
 			throw LOWLEVEL;
 		}
 	}
@@ -696,7 +611,7 @@ void CheckRuneLevel(TCreature *Actor, int SpellNr){
 			throw ERROR;
 		}
 
-		if(MagicLevel->Get() < SpellList[SpellNr].RuneLevel){
+		if(MagicLevel->Get() < SpellsGet(SpellNr)->RuneLevel){
 			throw LOWMAGICLEVEL;
 		}
 	}
@@ -806,14 +721,15 @@ int ComputeDamage(TCreature *Actor, int SpellNr, int Damage, int Variation){
 		int Level = Actor->Skills[SKILL_LEVEL]->Get();
 		int MagicLevel = Actor->Skills[SKILL_MAGIC_LEVEL]->Get();
 		int Multiplier = Level * 2 + MagicLevel * 3;
-		if(SpellNr != 0){
-			if((SpellList[SpellNr].Flags & 4) != 0 && Multiplier > 100){
-				Multiplier = 100;
-			}
+		if(SpellNr != 0 && SpellsValid(SpellNr)){
+		const TSpellList *Spell = SpellsGet(SpellNr);
+		if((Spell->Flags & 4) != 0 && Multiplier > 100){
+			Multiplier = 100;
+		}
 
-			if((SpellList[SpellNr].Flags & 8) != 0 && Multiplier < 100){
-				Multiplier = 100;
-			}
+		if((Spell->Flags & 8) != 0 && Multiplier < 100){
+			Multiplier = 100;
+		}
 		}
 		Damage = (Damage * Multiplier) / 100;
 	}
@@ -822,12 +738,12 @@ int ComputeDamage(TCreature *Actor, int SpellNr, int Damage, int Variation){
 }
 
 bool IsAggressiveSpell(int SpellNr){
-	if(SpellNr < 1 || SpellNr >= NARRAY(SpellList)){
+	if(!SpellsValid(SpellNr)){
 		error("IsAggressiveSpell: Ungültige Spruchnummer %d.\n", SpellNr);
 		return false;
 	}
 
-	return (SpellList[SpellNr].Flags & 1) != 0;
+	return (SpellsGet(SpellNr)->Flags & 1) != 0;
 }
 
 void MassCombat(TCreature *Actor, Object Target, int ManaPoints, int SoulPoints,
@@ -3415,6 +3331,11 @@ static void CastSpell(uint32 CreatureID, int SpellNr, const char (*SpellStr)[512
 		throw ERROR;
 	}
 
+	if(!SpellsValid(SpellNr)){
+		error("CastSpell: Ungültige Spruchnummer %d.\n", SpellNr);
+		throw ERROR;
+	}
+
 	CheckSpellbook(Actor, SpellNr);
 	CheckAccount(Actor, SpellNr);
 	CheckLevel(Actor, SpellNr);
@@ -3430,36 +3351,37 @@ static void CastSpell(uint32 CreatureID, int SpellNr, const char (*SpellStr)[512
 		throw PROTECTIONZONE;
 	}
 
-	int ManaPoints = SpellList[SpellNr].Mana;
-	int SoulPoints = SpellList[SpellNr].SoulPoints;
+	const TSpellList *Spell = SpellsGet(SpellNr);
+	int ManaPoints = Spell->Mana;
+	int SoulPoints = Spell->SoulPoints;
 	switch(SpellNr) {
 		case 1:{
-			int Min = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 20);
-			int Delta = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 10);
+			int Min = (Spell->Param1 != 0 ? Spell->Param1 : 20);
+			int Delta = (Spell->Param2 != 0 ? Spell->Param2 : 10);
 			int Amount = ComputeDamage(Actor, SpellNr, Min, Delta);
 			Heal(Actor, ManaPoints, SoulPoints, Amount);
 			break;
 		}
 
 		case 2:{
-			int Min = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 40);
-			int Delta = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 20);
+			int Min = (Spell->Param1 != 0 ? Spell->Param1 : 40);
+			int Delta = (Spell->Param2 != 0 ? Spell->Param2 : 20);
 			int Amount = ComputeDamage(Actor, SpellNr, Min, Delta);
 			Heal(Actor, ManaPoints, SoulPoints, Amount);
 			break;
 		}
 
 		case 3:{
-			int Min = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 250);
-			int Delta = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 50);
+			int Min = (Spell->Param1 != 0 ? Spell->Param1 : 250);
+			int Delta = (Spell->Param2 != 0 ? Spell->Param2 : 50);
 			int Amount = ComputeDamage(Actor, SpellNr, Min, Delta);
 			Heal(Actor, ManaPoints, SoulPoints, Amount);
 			break;
 		}
 
 		case 6:{
-			int Percent = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 30);
-			int Duration = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 3);
+			int Percent = (Spell->Param1 != 0 ? Spell->Param1 : 30);
+			int Duration = (Spell->Param2 != 0 ? Spell->Param2 : 3);
 			MagicGoStrength(Actor, Actor, ManaPoints, SoulPoints, Percent, Duration);
 			break;
 		}
@@ -3470,38 +3392,38 @@ static void CastSpell(uint32 CreatureID, int SpellNr, const char (*SpellStr)[512
 		}
 
 		case 10:{
-			int Brightness = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 6);
-			int Duration = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 500);
+			int Brightness = (Spell->Param1 != 0 ? Spell->Param1 : 6);
+			int Duration = (Spell->Param2 != 0 ? Spell->Param2 : 500);
 			Enlight(Actor, ManaPoints, SoulPoints, Brightness, Duration);
 			break;
 		}
 
 		case 11:{
-			int Brightness = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 8);
-			int Duration = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 1000);
+			int Brightness = (Spell->Param1 != 0 ? Spell->Param1 : 8);
+			int Duration = (Spell->Param2 != 0 ? Spell->Param2 : 1000);
 			Enlight(Actor, ManaPoints, SoulPoints, Brightness, Duration);
 			break;
 		}
 
 		case 13:{
-			int Min = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 150);
-			int Delta = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 50);
-			int Radius = (SpellList[SpellNr].Param3 != 0 ? SpellList[SpellNr].Param3 : 5);
-			int Angle = (SpellList[SpellNr].Param4 != 0 ? SpellList[SpellNr].Param4 : 30);
+			int Min = (Spell->Param1 != 0 ? Spell->Param1 : 150);
+			int Delta = (Spell->Param2 != 0 ? Spell->Param2 : 50);
+			int Radius = (Spell->Param3 != 0 ? Spell->Param3 : 5);
+			int Angle = (Spell->Param4 != 0 ? Spell->Param4 : 30);
 			int Damage = ComputeDamage(Actor, SpellNr, Min, Delta);
-			AngleCombat(Actor, ManaPoints, SoulPoints, Damage,
-					EFFECT_ENERGY, Radius, Angle, DAMAGE_ENERGY);
+			    AngleCombat(Actor, ManaPoints, SoulPoints, Damage,
+				    GetSpellEffect(SpellNr, EFFECT_ENERGY), Radius, Angle, DAMAGE_ENERGY);
 			break;
 		}
 
 		case 19:{
-			int Min = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 30);
-			int Delta = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 10);
-			int Radius = (SpellList[SpellNr].Param3 != 0 ? SpellList[SpellNr].Param3 : 4);
-			int Angle = (SpellList[SpellNr].Param4 != 0 ? SpellList[SpellNr].Param4 : 45);
+			int Min = (Spell->Param1 != 0 ? Spell->Param1 : 30);
+			int Delta = (Spell->Param2 != 0 ? Spell->Param2 : 10);
+			int Radius = (Spell->Param3 != 0 ? Spell->Param3 : 4);
+			int Angle = (Spell->Param4 != 0 ? Spell->Param4 : 45);
 			int Damage = ComputeDamage(Actor, SpellNr, Min, Delta);
-			AngleCombat(Actor, ManaPoints, SoulPoints, Damage,
-					EFFECT_FIRE_BURST, Radius, Angle, DAMAGE_FIRE);
+			    AngleCombat(Actor, ManaPoints, SoulPoints, Damage,
+				    GetSpellEffect(SpellNr, EFFECT_FIRE_BURST), Radius, Angle, DAMAGE_FIRE);
 			break;
 		}
 
@@ -3511,34 +3433,34 @@ static void CastSpell(uint32 CreatureID, int SpellNr, const char (*SpellStr)[512
 		}
 
 		case 22:{
-			int Min = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 60);
-			int Delta = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 20);
-			int Radius = (SpellList[SpellNr].Param3 != 0 ? SpellList[SpellNr].Param3 : 5);
-			int Angle = (SpellList[SpellNr].Param4 != 0 ? SpellList[SpellNr].Param4 : 0);
+			int Min = (Spell->Param1 != 0 ? Spell->Param1 : 60);
+			int Delta = (Spell->Param2 != 0 ? Spell->Param2 : 20);
+			int Radius = (Spell->Param3 != 0 ? Spell->Param3 : 5);
+			int Angle = (Spell->Param4 != 0 ? Spell->Param4 : 0);
 			int Damage = ComputeDamage(Actor, SpellNr, Min, Delta);
-			AngleCombat(Actor, ManaPoints, SoulPoints, Damage,
-					EFFECT_FIRE_BLAST, Radius, Angle, DAMAGE_ENERGY);
+			    AngleCombat(Actor, ManaPoints, SoulPoints, Damage,
+				    GetSpellEffect(SpellNr, EFFECT_FIRE_BLAST), Radius, Angle, DAMAGE_ENERGY);
 			break;
 		}
 
 		case 23:{
-			int Min = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 120);
-			int Delta = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 80);
-			int Radius = (SpellList[SpellNr].Param3 != 0 ? SpellList[SpellNr].Param3 : 8);
-			int Angle = (SpellList[SpellNr].Param4 != 0 ? SpellList[SpellNr].Param4 : 0);
+			int Min = (Spell->Param1 != 0 ? Spell->Param1 : 120);
+			int Delta = (Spell->Param2 != 0 ? Spell->Param2 : 80);
+			int Radius = (Spell->Param3 != 0 ? Spell->Param3 : 8);
+			int Angle = (Spell->Param4 != 0 ? Spell->Param4 : 0);
 			int Damage = ComputeDamage(Actor, SpellNr, Min, Delta);
-			AngleCombat(Actor, ManaPoints, SoulPoints, Damage,
-					EFFECT_FIRE_BLAST, Radius, Angle, DAMAGE_ENERGY);
+			    AngleCombat(Actor, ManaPoints, SoulPoints, Damage,
+				    GetSpellEffect(SpellNr, EFFECT_FIRE_BLAST), Radius, Angle, DAMAGE_ENERGY);
 			break;
 		}
 
 		case 24:{
-			int Min = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 250);
-			int Delta = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 50);
-			int Radius = (SpellList[SpellNr].Param3 != 0 ? SpellList[SpellNr].Param3 : 6);
+			int Min = (Spell->Param1 != 0 ? Spell->Param1 : 250);
+			int Delta = (Spell->Param2 != 0 ? Spell->Param2 : 50);
+			int Radius = (Spell->Param3 != 0 ? Spell->Param3 : 6);
 			int Damage = ComputeDamage(Actor, SpellNr, Min, Delta);
-			MassCombat(Actor, Actor->CrObject, ManaPoints, SoulPoints, Damage,
-					EFFECT_EXPLOSION, Radius, DAMAGE_PHYSICAL, ANIMATION_FIRE);
+			    MassCombat(Actor, Actor->CrObject, ManaPoints, SoulPoints, Damage,
+				    GetSpellEffect(SpellNr, EFFECT_EXPLOSION), Radius, DAMAGE_PHYSICAL, GetSpellAnimation(SpellNr, ANIMATION_FIRE));
 			break;
 		}
 
@@ -3553,8 +3475,8 @@ static void CastSpell(uint32 CreatureID, int SpellNr, const char (*SpellStr)[512
 		}
 
 		case 39:{
-			int Percent = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 70);
-			int Duration = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 2);
+			int Percent = (Spell->Param1 != 0 ? Spell->Param1 : 70);
+			int Duration = (Spell->Param2 != 0 ? Spell->Param2 : 2);
 			MagicGoStrength(Actor, Actor, ManaPoints, SoulPoints, Percent, Duration);
 			break;
 		}
@@ -3565,51 +3487,51 @@ static void CastSpell(uint32 CreatureID, int SpellNr, const char (*SpellStr)[512
 		}
 
 		case 44:{
-			int Duration = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 200);
+			int Duration = (Spell->Param1 != 0 ? Spell->Param1 : 200);
 			Shielding(Actor, ManaPoints, SoulPoints, Duration);
 			break;
 		}
 
 		case 45:{
-			int Duration = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 200);
+			int Duration = (Spell->Param1 != 0 ? Spell->Param1 : 200);
 			Invisibility(Actor, ManaPoints, SoulPoints, Duration);
 			break;
 		}
 
 		case 48:{
-			int ArrowType = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 1);
-			int Count = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 5);
+			int ArrowType = (Spell->Param1 != 0 ? Spell->Param1 : 1);
+			int Count = (Spell->Param2 != 0 ? Spell->Param2 : 5);
 			CreateArrows(Actor, ManaPoints, SoulPoints, ArrowType, Count);
 			break;
 		}
 
 		case 49:{
-			int ArrowType = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 2);
-			int Count = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 3);
+			int ArrowType = (Spell->Param1 != 0 ? Spell->Param1 : 2);
+			int Count = (Spell->Param2 != 0 ? Spell->Param2 : 3);
 			CreateArrows(Actor, ManaPoints, SoulPoints, ArrowType, Count);
 			break;
 		}
 
 		case 51:{
-			int ArrowType = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 0);
-			int Count = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 10);
+			int ArrowType = (Spell->Param1 != 0 ? Spell->Param1 : 0);
+			int Count = (Spell->Param2 != 0 ? Spell->Param2 : 10);
 			CreateArrows(Actor, ManaPoints, SoulPoints, ArrowType, Count);
 			break;
 		}
 
 		case 56:{
-			int Min = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 200);
-			int Delta = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 50);
-			int Radius = (SpellList[SpellNr].Param3 != 0 ? SpellList[SpellNr].Param3 : 8);
+			int Min = (Spell->Param1 != 0 ? Spell->Param1 : 200);
+			int Delta = (Spell->Param2 != 0 ? Spell->Param2 : 50);
+			int Radius = (Spell->Param3 != 0 ? Spell->Param3 : 8);
 			int Damage = ComputeDamage(Actor, SpellNr, Min, Delta);
-			MassCombat(Actor, Actor->CrObject, ManaPoints, SoulPoints, Damage,
-					EFFECT_POISON, Radius, DAMAGE_POISON_PERIODIC, ANIMATION_NONE);
+			    MassCombat(Actor, Actor->CrObject, ManaPoints, SoulPoints, Damage,
+				    GetSpellEffect(SpellNr, EFFECT_POISON), Radius, DAMAGE_POISON_PERIODIC, GetSpellAnimation(SpellNr, ANIMATION_NONE));
 			break;
 		}
 
 		case 75:{
-			int Brightness = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 9);
-			int Duration = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 2000);
+			int Brightness = (Spell->Param1 != 0 ? Spell->Param1 : 9);
+			int Duration = (Spell->Param2 != 0 ? Spell->Param2 : 2000);
 			Enlight(Actor, ManaPoints, SoulPoints, Brightness, Duration);
 			break;
 		}
@@ -3626,12 +3548,12 @@ static void CastSpell(uint32 CreatureID, int SpellNr, const char (*SpellStr)[512
 
 		case 80:{
 			int Level = Actor->Skills[SKILL_LEVEL]->Get();
-			int Min = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 80);
-			int Delta = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 20);
-			int Radius = (SpellList[SpellNr].Param3 != 0 ? SpellList[SpellNr].Param3 : 2);
+			int Min = (Spell->Param1 != 0 ? Spell->Param1 : 80);
+			int Delta = (Spell->Param2 != 0 ? Spell->Param2 : 20);
+			int Radius = (Spell->Param3 != 0 ? Spell->Param3 : 2);
 			int Damage = (Level * ComputeDamage(Actor, SpellNr, Min, Delta)) / 25;
-			MassCombat(Actor, Actor->CrObject, Level * 4, 0, Damage,
-					EFFECT_BONE_HIT, Radius, DAMAGE_PHYSICAL, ANIMATION_NONE);
+			    MassCombat(Actor, Actor->CrObject, Level * 4, 0, Damage,
+				    GetSpellEffect(SpellNr, EFFECT_BONE_HIT), Radius, DAMAGE_PHYSICAL, GetSpellAnimation(SpellNr, ANIMATION_NONE));
 			break;
 		}
 
@@ -3641,17 +3563,17 @@ static void CastSpell(uint32 CreatureID, int SpellNr, const char (*SpellStr)[512
 		}
 
 		case 82:{
-			int Min = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 200);
-			int Delta = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 40);
-			int Radius = (SpellList[SpellNr].Param3 != 0 ? SpellList[SpellNr].Param3 : 4);
+			int Min = (Spell->Param1 != 0 ? Spell->Param1 : 200);
+			int Delta = (Spell->Param2 != 0 ? Spell->Param2 : 40);
+			int Radius = (Spell->Param3 != 0 ? Spell->Param3 : 4);
 			int Amount = ComputeDamage(Actor, SpellNr, Min, Delta);
 			MassHeal(Actor, Actor->CrObject, ManaPoints, SoulPoints, Amount, Radius);
 			break;
 		}
 
 		case 84:{
-			int Min = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 120);
-			int Delta = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 40);
+			int Min = (Spell->Param1 != 0 ? Spell->Param1 : 120);
+			int Delta = (Spell->Param2 != 0 ? Spell->Param2 : 40);
 			int Amount = ComputeDamage(Actor, SpellNr, Min, Delta);
 			HealFriend(Actor, SpellStr[3], ManaPoints, SoulPoints, Amount);
 			break;
@@ -3663,29 +3585,29 @@ static void CastSpell(uint32 CreatureID, int SpellNr, const char (*SpellStr)[512
 		}
 
 		case 87:{
-			int Min = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 45);
-			int Delta = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 10);
+			int Min = (Spell->Param1 != 0 ? Spell->Param1 : 45);
+			int Delta = (Spell->Param2 != 0 ? Spell->Param2 : 10);
 			int Damage = ComputeDamage(Actor, SpellNr, Min, Delta);
-			AngleCombat(Actor, ManaPoints, SoulPoints, Damage,
-					EFFECT_DEATH, 1, 0, DAMAGE_PHYSICAL);
+			    AngleCombat(Actor, ManaPoints, SoulPoints, Damage,
+				    GetSpellEffect(SpellNr, EFFECT_DEATH), 1, 0, DAMAGE_PHYSICAL);
 			break;
 		}
 
 		case 88:{
-			int Min = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 45);
-			int Delta = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 10);
+			int Min = (Spell->Param1 != 0 ? Spell->Param1 : 45);
+			int Delta = (Spell->Param2 != 0 ? Spell->Param2 : 10);
 			int Damage = ComputeDamage(Actor, SpellNr, Min, Delta);
-			AngleCombat(Actor, ManaPoints, SoulPoints, Damage,
-					EFFECT_ENERGY, 1, 0, DAMAGE_ENERGY);
+			    AngleCombat(Actor, ManaPoints, SoulPoints, Damage,
+				    GetSpellEffect(SpellNr, EFFECT_ENERGY), 1, 0, DAMAGE_ENERGY);
 			break;
 		}
 
 		case 89:{
-			int Min = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 45);
-			int Delta = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 10);
+			int Min = (Spell->Param1 != 0 ? Spell->Param1 : 45);
+			int Delta = (Spell->Param2 != 0 ? Spell->Param2 : 10);
 			int Damage = ComputeDamage(Actor, SpellNr, Min, Delta);
-			AngleCombat(Actor, ManaPoints, SoulPoints, Damage,
-					EFFECT_FIRE_BURST, 1, 0, DAMAGE_FIRE);
+			    AngleCombat(Actor, ManaPoints, SoulPoints, Damage,
+				    GetSpellEffect(SpellNr, EFFECT_FIRE_BURST), 1, 0, DAMAGE_FIRE);
 			break;
 		}
 
@@ -3716,7 +3638,6 @@ static void CastSpell(uint32 CreatureID, int SpellNr, const char (*SpellStr)[512
 			break;
 		}
 	}
-
 	if(IsAggressiveSpell(SpellNr)){
 		Actor->BlockLogout(60, false);
 	}
@@ -3729,11 +3650,11 @@ static void RuneSpell(uint32 CreatureID, int SpellNr){
 		throw ERROR;
 	}
 
-	uint8 RuneGr = SpellList[SpellNr].RuneGr;
-	uint8 RuneNr = SpellList[SpellNr].RuneNr;
-	int ManaPoints = SpellList[SpellNr].Mana;
-	int SoulPoints = SpellList[SpellNr].SoulPoints;
-	int Amount = SpellList[SpellNr].Amount;
+	uint8 RuneGr = Spell->RuneGr;
+	uint8 RuneNr = Spell->RuneNr;
+	int ManaPoints = Spell->Mana;
+	int SoulPoints = Spell->SoulPoints;
+	int Amount = Spell->Amount;
 
 	if(RuneGr == 0){
 		error("RuneSpell: Spell %d ist Runenspruch, hat aber keine Rune.\n", SpellNr);
@@ -3780,7 +3701,7 @@ static void RuneSpell(uint32 CreatureID, int SpellNr){
 		throw MAGICITEM;
 	}
 
-	GraphicalEffect(Actor->posx, Actor->posy, Actor->posz, EFFECT_MAGIC_RED);
+	GraphicalEffect(Actor->posx, Actor->posy, Actor->posz, GetSpellEffect(SpellNr, EFFECT_MAGIC_RED));
 }
 
 static int TypeOfSpell(const char *Text){
@@ -3908,7 +3829,7 @@ void GetMagicItemDescription(Object Obj, char *SpellString, int *MagicLevel){
 	}
 
 	GetSpellString(SpellNr, SpellString);
-	*MagicLevel = (int)SpellList[SpellNr].RuneLevel;
+	*MagicLevel = (int)Spell->RuneLevel;
 }
 
 void GetSpellbook(uint32 CharacterID, char *Buffer){
@@ -3933,7 +3854,7 @@ void GetSpellbook(uint32 CharacterID, char *Buffer){
 	for(int SpellNr = 0;
 			SpellNr < NARRAY(SpellList);
 			SpellNr += 1){
-		int Level = (int)SpellList[SpellNr].Level;
+		int Level = (int)Spell->Level;
 		if(MaxLevel < Level){
 			MaxLevel = Level;
 		}
@@ -3991,7 +3912,7 @@ int GetSpellLevel(int SpellNr){
 		return 1;
 	}
 
-	return (int)SpellList[SpellNr].Level;
+	return (int)Spell->Level;
 }
 
 int CheckForSpell(uint32 CreatureID, const char *Text){
@@ -4193,8 +4114,8 @@ void UseMagicItem(uint32 CreatureID, Object Obj, Object Dest){
 					throw NOCREATURE;
 				}
 
-				int Min = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 70);
-				int Delta = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 30);
+				int Min = (Spell->Param1 != 0 ? Spell->Param1 : 70);
+				int Delta = (Spell->Param2 != 0 ? Spell->Param2 : 30);
 				int Amount = ComputeDamage(Actor, SpellNr, Min, Delta);
 				Heal(Target, -1, 0, Amount); // -1 ?
 				break;
@@ -4205,28 +4126,30 @@ void UseMagicItem(uint32 CreatureID, Object Obj, Object Dest){
 					throw NOCREATURE;
 				}
 
-				int Min = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 250);
-				int Delta = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 30);
+				int Min = (Spell->Param1 != 0 ? Spell->Param1 : 250);
+				int Delta = (Spell->Param2 != 0 ? Spell->Param2 : 30);
 				int Amount = ComputeDamage(Actor, SpellNr, Min, Delta);
 				Heal(Target, -1, 0, Amount); // -1 ?
 				break;
 			}
 
 			case 7:{
-				int Min = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 15);
-				int Delta = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 5);
+				int Min = (Spell->Param1 != 0 ? Spell->Param1 : 15);
+				int Delta = (Spell->Param2 != 0 ? Spell->Param2 : 5);
 				int Damage = ComputeDamage(Actor, SpellNr, Min, Delta);
-				Combat(Actor, Dest, 0, 0, Damage, EFFECT_FIRE_BLAST,
-						ANIMATION_FIRE, DAMAGE_ENERGY);
+				Combat(Actor, Dest, 0, 0, Damage,
+					GetSpellEffect(SpellNr, EFFECT_FIRE_BLAST),
+					GetSpellAnimation(SpellNr, ANIMATION_FIRE), DAMAGE_ENERGY);
 				break;
 			}
 
 			case 8:{
-				int Min = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 30);
-				int Delta = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 10);
+				int Min = (Spell->Param1 != 0 ? Spell->Param1 : 30);
+				int Delta = (Spell->Param2 != 0 ? Spell->Param2 : 10);
 				int Damage = ComputeDamage(Actor, SpellNr, Min, Delta);
-				Combat(Actor, Dest, 0, 0, Damage, EFFECT_FIRE_BLAST,
-						ANIMATION_FIRE, DAMAGE_ENERGY);
+				Combat(Actor, Dest, 0, 0, Damage,
+					GetSpellEffect(SpellNr, EFFECT_FIRE_BLAST),
+					GetSpellAnimation(SpellNr, ANIMATION_FIRE), DAMAGE_ENERGY);
 				break;
 			}
 
@@ -4245,22 +4168,24 @@ void UseMagicItem(uint32 CreatureID, Object Obj, Object Dest){
 			}
 
 			case 15:{
-				int Min = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 20);
-				int Delta = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 5);
-				int Radius = (SpellList[SpellNr].Param3 != 0 ? SpellList[SpellNr].Param3 : 3);
+				int Min = (Spell->Param1 != 0 ? Spell->Param1 : 20);
+				int Delta = (Spell->Param2 != 0 ? Spell->Param2 : 5);
+				int Radius = (Spell->Param3 != 0 ? Spell->Param3 : 3);
 				int Damage = ComputeDamage(Actor, SpellNr, Min, Delta);
-				MassCombat(Actor, Dest, 0, 0, Damage, EFFECT_FIRE_BURST,
-						Radius, DAMAGE_FIRE, ANIMATION_FIRE);
+				MassCombat(Actor, Dest, 0, 0, Damage,
+					GetSpellEffect(SpellNr, EFFECT_FIRE_BURST),
+					Radius, DAMAGE_FIRE, GetSpellAnimation(SpellNr, ANIMATION_FIRE));
 				break;
 			}
 
 			case 16:{
-				int Min = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 50);
-				int Delta = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 15);
-				int Radius = (SpellList[SpellNr].Param3 != 0 ? SpellList[SpellNr].Param3 : 4);
+				int Min = (Spell->Param1 != 0 ? Spell->Param1 : 50);
+				int Delta = (Spell->Param2 != 0 ? Spell->Param2 : 15);
+				int Radius = (Spell->Param3 != 0 ? Spell->Param3 : 4);
 				int Damage = ComputeDamage(Actor, SpellNr, Min, Delta);
-				MassCombat(Actor, Dest, 0, 0, Damage, EFFECT_FIRE_BURST,
-						Radius, DAMAGE_FIRE, ANIMATION_FIRE);
+				MassCombat(Actor, Dest, 0, 0, Damage,
+					GetSpellEffect(SpellNr, EFFECT_FIRE_BURST),
+					Radius, DAMAGE_FIRE, GetSpellAnimation(SpellNr, ANIMATION_FIRE));
 				break;
 			}
 
@@ -4270,20 +4195,22 @@ void UseMagicItem(uint32 CreatureID, Object Obj, Object Dest){
 			}
 
 			case 18:{
-				int Min = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 60);
-				int Delta = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 40);
+				int Min = (Spell->Param1 != 0 ? Spell->Param1 : 60);
+				int Delta = (Spell->Param2 != 0 ? Spell->Param2 : 40);
 				int Damage = ComputeDamage(Actor, SpellNr, Min, Delta);
-				MassCombat(Actor, Dest, 0, 0, Damage, EFFECT_EXPLOSION,
-						1, DAMAGE_PHYSICAL, ANIMATION_FIRE);
+				MassCombat(Actor, Dest, 0, 0, Damage,
+					GetSpellEffect(SpellNr, EFFECT_EXPLOSION),
+					1, DAMAGE_PHYSICAL, GetSpellAnimation(SpellNr, ANIMATION_FIRE));
 				break;
 			}
 
 			case 21:{
-				int Min = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 150);
-				int Delta = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 20);
+				int Min = (Spell->Param1 != 0 ? Spell->Param1 : 150);
+				int Delta = (Spell->Param2 != 0 ? Spell->Param2 : 20);
 				int Damage = ComputeDamage(Actor, SpellNr, Min, Delta);
-				Combat(Actor, Dest, 0, 0, Damage, EFFECT_DEATH,
-						ANIMATION_DEATH, DAMAGE_PHYSICAL);
+				Combat(Actor, Dest, 0, 0, Damage,
+					GetSpellEffect(SpellNr, EFFECT_DEATH),
+					GetSpellAnimation(SpellNr, ANIMATION_DEATH), DAMAGE_PHYSICAL);
 				break;
 			}
 
@@ -4332,8 +4259,8 @@ void UseMagicItem(uint32 CreatureID, Object Obj, Object Dest){
 			}
 
 			case 50:{
-				int Min = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 120);
-				int Delta = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 20);
+				int Min = (Spell->Param1 != 0 ? Spell->Param1 : 120);
+				int Delta = (Spell->Param2 != 0 ? Spell->Param2 : 20);
 				int Damage = ComputeDamage(Actor, SpellNr, Min, Delta);
 				Combat(Actor, Dest, 0, 0, Damage, EFFECT_FIRE,
 						ANIMATION_FIRE, DAMAGE_FIRE_PERIODIC);
@@ -4349,10 +4276,10 @@ void UseMagicItem(uint32 CreatureID, Object Obj, Object Dest){
 					throw NOTUSABLE;
 				}
 
-				int ManaPoints = SpellList[SpellNr].Mana;
-				int SoulPoints = SpellList[SpellNr].SoulPoints;
-				int Percent = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : -101);
-				int Duration = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 1);
+				int ManaPoints = Spell->Mana;
+				int SoulPoints = Spell->SoulPoints;
+				int Percent = (Spell->Param1 != 0 ? Spell->Param1 : -101);
+				int Duration = (Spell->Param2 != 0 ? Spell->Param2 : 1);
 				MagicGoStrength(Actor, Target, ManaPoints, SoulPoints, Percent, Duration);
 				break;
 			}
@@ -4363,8 +4290,8 @@ void UseMagicItem(uint32 CreatureID, Object Obj, Object Dest){
 			}
 
 			case 77:{
-				int Min = (SpellList[SpellNr].Param1 != 0 ? SpellList[SpellNr].Param1 : 70);
-				int Delta = (SpellList[SpellNr].Param2 != 0 ? SpellList[SpellNr].Param2 : 20);
+				int Min = (Spell->Param1 != 0 ? Spell->Param1 : 70);
+				int Delta = (Spell->Param2 != 0 ? Spell->Param2 : 20);
 				int Damage = ComputeDamage(Actor, SpellNr, Min, Delta);
 				Combat(Actor, Dest, 0, 0, Damage, EFFECT_POISON_HIT,
 						ANIMATION_ENERGY, DAMAGE_POISON_PERIODIC);
@@ -4449,126 +4376,9 @@ void DrinkPotion(uint32 CreatureID, Object Obj){
 
 // Magic Init Functions
 // =============================================================================
-static void InitSpellsFromFile(void){
-	for(int i = 0; i < NARRAY(SpellList); i += 1){
-		memset(&SpellList[i], 0, sizeof(TSpellList));
-	}
-
-	char FileName[4096];
-	snprintf(FileName, sizeof(FileName), "%s/spells.dat", DATAPATH);
-
-	if(!FileExists(FileName)){
-		print(1, "InitSpells: Datei %s nicht gefunden, benutze eingebaute Zauber.\n", FileName);
-		return;
-	}
-
-	print(1, "InitSpells: Lade Zauber aus %s ...\n", FileName);
-
-	TReadScriptFile Script;
-	Script.open(FileName);
-
-	int CurrentSpellNr = -1;
-	TSpellList *CurrentSpell = NULL;
-
-	while(true){
-		Script.nextToken();
-		if(Script.Token == ENDOFFILE){
-			break;
-		}
-
-		char Identifier[MAX_IDENT_LENGTH];
-		strcpy(Identifier, Script.getIdentifier());
-		Script.readSymbol('=');
-
-		if(strcmp(Identifier, "number") == 0){
-			int SpellNr = Script.readNumber();
-			if(SpellNr < 0 || SpellNr >= NARRAY(SpellList)){
-				Script.error("illegal spell number");
-			}
-
-			CurrentSpellNr = SpellNr;
-			CurrentSpell = &SpellList[SpellNr];
-			memset(CurrentSpell, 0, sizeof(TSpellList));
-		}else if(CurrentSpell == NULL){
-			Script.error("spell property before number");
-		}else if(strcmp(Identifier, "mana") == 0){
-			CurrentSpell->Mana = Script.readNumber();
-		}else if(strcmp(Identifier, "level") == 0){
-			CurrentSpell->Level = (uint16)Script.readNumber();
-		}else if(strcmp(Identifier, "flags") == 0){
-			CurrentSpell->Flags = (uint16)Script.readNumber();
-		}else if(strcmp(Identifier, "runegroup") == 0){
-			CurrentSpell->RuneGr = (uint8)Script.readNumber();
-		}else if(strcmp(Identifier, "runenumber") == 0){
-			CurrentSpell->RuneNr = (uint8)Script.readNumber();
-		}else if(strcmp(Identifier, "runelevel") == 0){
-			CurrentSpell->RuneLevel = (uint16)Script.readNumber();
-		}else if(strcmp(Identifier, "soulpoints") == 0){
-			CurrentSpell->SoulPoints = Script.readNumber();
-		}else if(strcmp(Identifier, "amount") == 0){
-			CurrentSpell->Amount = Script.readNumber();
-		// Generic parameter slots (spell-specific meaning, but fully data-driven).
-		}else if(strcmp(Identifier, "param1") == 0){
-			CurrentSpell->Param1 = Script.readNumber();
-		}else if(strcmp(Identifier, "param2") == 0){
-			CurrentSpell->Param2 = Script.readNumber();
-		}else if(strcmp(Identifier, "param3") == 0){
-			CurrentSpell->Param3 = Script.readNumber();
-		}else if(strcmp(Identifier, "param4") == 0){
-			CurrentSpell->Param4 = Script.readNumber();
-		// Named aliases for common parameter types, so spells.dat can stay readable.
-		}else if(strcmp(Identifier, "min") == 0
-				|| strcmp(Identifier, "min_damage") == 0
-				|| strcmp(Identifier, "mindamage") == 0){
-			CurrentSpell->Param1 = Script.readNumber();
-		}else if(strcmp(Identifier, "delta") == 0
-				|| strcmp(Identifier, "delta_damage") == 0
-				|| strcmp(Identifier, "deltadamage") == 0){
-			CurrentSpell->Param2 = Script.readNumber();
-		}else if(strcmp(Identifier, "radius") == 0){
-			CurrentSpell->Param3 = Script.readNumber();
-		}else if(strcmp(Identifier, "angle") == 0){
-			CurrentSpell->Param4 = Script.readNumber();
-		}else if(strcmp(Identifier, "brightness") == 0){
-			CurrentSpell->Param1 = Script.readNumber();
-		}else if(strcmp(Identifier, "duration") == 0){
-			CurrentSpell->Param2 = Script.readNumber();
-		}else if(strcmp(Identifier, "speed_percent") == 0
-				|| strcmp(Identifier, "speedpercent") == 0){
-			CurrentSpell->Param1 = Script.readNumber();
-		}else if(strcmp(Identifier, "arrow_type") == 0
-				|| strcmp(Identifier, "arrowtype") == 0){
-			CurrentSpell->Param1 = Script.readNumber();
-		}else if(strcmp(Identifier, "arrow_count") == 0
-				|| strcmp(Identifier, "arrowcount") == 0){
-			CurrentSpell->Param2 = Script.readNumber();
-		}else if(strcmp(Identifier, "words") == 0){
-			Script.readSymbol('{');
-
-			int SyllableCount = 0;
-			do{
-				const char *Word = Script.readIdentifier();
-				int SyllableNr = FindSpellSyllable(Word);
-				if(SyllableNr <= 0){
-					Script.error("unknown spell syllable");
-				}
-
-				if(SyllableCount >= (int)NARRAY(CurrentSpell->Syllable)){
-					Script.error("too many syllables in spell");
-				}
-
-				CurrentSpell->Syllable[SyllableCount] = (uint8)SyllableNr;
-				SyllableCount += 1;
-			}while(Script.readSpecial() != '}');
-		}else if(strcmp(Identifier, "comment") == 0){
-			CurrentSpell->Comment = AddStaticString(Script.readString());
-		}else{
-			Script.error("unknown spell property");
-		}
-	}
-
-	Script.close();
-}
+// Spell initialization and legacy data have been extracted into src/spells.cc.
+// The old helpers above are disabled with #if 0 to keep them for reference.
+// See spells.hh / spells.cc for the new API (SpellsInit, SpellsGet, etc.).
 
 static void InitCircles(void){
 	char FileName[4096];
@@ -4608,6 +4418,7 @@ static void InitCircles(void){
 	//if(IN.fail()) { throw "..."; }
 }
 
+#if 0
 static TSpellList *CreateSpell(int SpellNr, ...){
 	ASSERT(SpellNr < NARRAY(SpellList));
 	int SyllableCount = 0;
@@ -4641,7 +4452,9 @@ static TSpellList *CreateSpell(int SpellNr, ...){
 	va_end(ap);
 	return Spell;
 }
+#endif
 
+#if 0
 static void InitSpellsLegacy(void){
 	TSpellList *Spell;
 
@@ -5380,7 +5193,9 @@ static void InitSpellsLegacy(void){
 	Spell->Flags = 0;
 	Spell->Comment = "Start Monsterraid";
 }
+#endif
 
+#if 0
 static void InitSpells(void){
 	InitSpellsFromFile();
 
@@ -5390,10 +5205,11 @@ static void InitSpells(void){
 		InitSpellsLegacy();
 	}
 }
+#endif
 
 void InitMagic(void){
 	InitCircles();
-	InitSpells();
+	SpellsInit();
 	InitLog("banish");
 }
 

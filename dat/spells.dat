@@ -1,0 +1,959 @@
+# spells.dat - complete spell definitions
+# Generated from the legacy spell table in src/magic.cc
+# Fields: number, mana, level, flags, runegroup, runenumber, runelevel,
+# soulpoints, amount, param1..param4, min, delta, radius, angle,
+# brightness, duration, effect, animation, words = { ... }, comment = "..."
+
+# Spell 1 - Light Healing
+number = 1
+mana = 25
+level = 9
+flags = 8
+words = { ex ura }
+comment = "Light Healing"
+
+# Spell 2 - Intense Healing
+number = 2
+mana = 40
+level = 11
+flags = 8
+words = { ex ura gran }
+comment = "Intense Healing"
+
+# Spell 3 - Ultimate Healing
+number = 3
+mana = 160
+level = 20
+flags = 8
+words = { ex ura vita }
+comment = "Ultimate Healing"
+
+# Spell 4 - Intense Healing Rune
+number = 4
+mana = 240
+level = 15
+runegroup = 79
+runenumber = 5
+flags = 8
+amount = 1
+runelevel = 1
+soulpoints = 2
+words = { ad ura gran }
+comment = "Intense Healing Rune"
+
+# Spell 5 - Ultimate Healing Rune
+number = 5
+mana = 400
+level = 24
+runegroup = 79
+runenumber = 13
+flags = 8
+amount = 1
+runelevel = 4
+soulpoints = 3
+words = { ad ura vita }
+comment = "Ultimate Healing Rune"
+
+# Spell 6 - Haste
+number = 6
+mana = 60
+level = 14
+flags = 2
+words = { ut ani hur }
+comment = "Haste"
+
+# Spell 7 - Light Magic Missile (rune)
+number = 7
+mana = 120
+level = 15
+runegroup = 79
+runenumber = 27
+flags = 9
+amount = 5
+runelevel = 0
+soulpoints = 1
+words = { ad ori }
+comment = "Light Magic Missile"
+
+# Spell 8 - Heavy Magic Missile (rune)
+number = 8
+mana = 280
+level = 25
+runegroup = 79
+runenumber = 51
+flags = 9
+amount = 5
+runelevel = 4
+soulpoints = 2
+words = { ad ori gran }
+comment = "Heavy Magic Missile"
+
+# Spell 9 - Summon Creature
+number = 9
+mana = 0
+level = 25
+flags = 1
+words = { ut evo res para }
+comment = "Summon Creature"
+
+# Spell 10 - Light
+number = 10
+mana = 20
+level = 8
+flags = 0
+words = { ut evo lux }
+comment = "Light"
+
+# Spell 11 - Great Light
+number = 11
+mana = 60
+level = 13
+flags = 0
+words = { ut evo gran lux }
+comment = "Great Light"
+
+# Spell 12 - Convince Creature (rune)
+number = 12
+mana = 200
+level = 16
+runegroup = 79
+runenumber = 30
+flags = 1
+amount = 1
+runelevel = 5
+soulpoints = 3
+words = { ad eta sio }
+comment = "Convince Creature"
+
+# Spell 13 - Energy Wave
+number = 13
+mana = 250
+level = 38
+flags = 1
+words = { ex evo mort hur }
+comment = "Energy Wave"
+
+# Spell 14 - Chameleon (rune)
+number = 14
+mana = 600
+level = 27
+runegroup = 79
+runenumber = 31
+flags = 0
+amount = 1
+runelevel = 4
+soulpoints = 2
+words = { ad evo ina }
+comment = "Chameleon"
+
+# Spell 15 - Fireball (rune)
+number = 15
+mana = 160
+level = 17
+runegroup = 79
+runenumber = 42
+flags = 9
+amount = 2
+runelevel = 2
+soulpoints = 2
+words = { ad ori flam }
+comment = "Fireball"
+
+# Spell 16 - Great Fireball (rune)
+number = 16
+mana = 480
+level = 23
+runegroup = 79
+runenumber = 44
+flags = 9
+amount = 2
+runelevel = 4
+soulpoints = 3
+words = { ad ori gran flam }
+comment = "Great Fireball"
+
+# Spell 17 - Firebomb (rune)
+number = 17
+mana = 600
+level = 27
+runegroup = 79
+runenumber = 45
+flags = 1
+amount = 2
+runelevel = 5
+soulpoints = 4
+words = { ad evo mas flam }
+comment = "Firebomb"
+
+# Spell 18 - Explosion (rune)
+number = 18
+mana = 720
+level = 31
+runegroup = 79
+runenumber = 53
+flags = 1
+amount = 3
+runelevel = 6
+soulpoints = 4
+words = { ad evo mas hur }
+comment = "Explosion"
+
+# Spell 19 - Fire Wave
+number = 19
+mana = 80
+level = 18
+flags = 9
+words = { ex evo flam hur }
+comment = "Fire Wave"
+
+# Spell 20 - Find Person
+number = 20
+mana = 20
+level = 8
+flags = 0
+words = { ex iva para }
+comment = "Find Person"
+
+# Spell 21 - Sudden Death (rune)
+number = 21
+mana = 880
+level = 45
+runegroup = 79
+runenumber = 8
+flags = 1
+amount = 1
+runelevel = 15
+soulpoints = 5
+words = { ad ori vita vis }
+comment = "Sudden Death"
+
+# Spell 22 - Energy Beam
+number = 22
+mana = 100
+level = 23
+flags = 1
+words = { ex evo vis lux }
+comment = "Energy Beam"
+
+# Spell 23 - Great Energy Beam
+number = 23
+mana = 200
+level = 29
+flags = 1
+words = { ex evo gran vis lux }
+comment = "Great Energy Beam"
+
+# Spell 24 - Ultimate Explosion
+number = 24
+mana = 1200
+level = 60
+flags = 3
+words = { ex evo gran mas vis }
+comment = "Ultimate Explosion"
+
+# Spell 25 - Fire Field (rune)
+number = 25
+mana = 240
+level = 15
+runegroup = 79
+runenumber = 41
+flags = 1
+amount = 3
+runelevel = 1
+soulpoints = 1
+words = { ad evo grav flam }
+comment = "Fire Field"
+
+# Spell 26 - Poison Field (rune)
+number = 26
+mana = 200
+level = 14
+runegroup = 79
+runenumber = 25
+flags = 1
+amount = 3
+runelevel = 0
+soulpoints = 1
+words = { ad evo grav pox }
+comment = "Poison Field"
+
+# Spell 27 - Energy Field (rune)
+number = 27
+mana = 320
+level = 18
+runegroup = 79
+runenumber = 17
+flags = 1
+amount = 3
+runelevel = 3
+soulpoints = 2
+words = { ad evo grav vis }
+comment = "Energy Field"
+
+# Spell 28 - Fire Wall (rune)
+number = 28
+mana = 780
+level = 33
+runegroup = 79
+runenumber = 43
+flags = 1
+amount = 4
+runelevel = 6
+soulpoints = 4
+words = { ad evo mas grav flam }
+comment = "Fire Wall"
+
+# Spell 29 - Antidote
+number = 29
+mana = 30
+level = 10
+flags = 0
+words = { ex ana pox }
+comment = "Antidote"
+
+# Spell 30 - Destroy Field (rune)
+number = 30
+mana = 120
+level = 17
+runegroup = 79
+runenumber = 1
+flags = 0
+amount = 3
+runelevel = 3
+soulpoints = 2
+words = { ad ito grav }
+comment = "Destroy Field"
+
+# Spell 31 - Antidote Rune
+number = 31
+mana = 200
+level = 15
+runegroup = 79
+runenumber = 6
+flags = 0
+amount = 1
+runelevel = 0
+soulpoints = 1
+words = { ad ana pox }
+comment = "Antidote Rune"
+
+# Spell 32 - Poison Wall (rune)
+number = 32
+mana = 640
+level = 29
+runegroup = 79
+runenumber = 29
+flags = 1
+amount = 4
+runelevel = 5
+soulpoints = 3
+words = { ad evo mas grav pox }
+comment = "Poison Wall"
+
+# Spell 33 - Energy Wall (rune)
+number = 33
+mana = 1000
+level = 41
+runegroup = 79
+runenumber = 19
+flags = 1
+amount = 4
+runelevel = 9
+soulpoints = 5
+words = { ad evo mas grav vis }
+comment = "Energy Wall"
+
+# Spell 34 - Get Item
+number = 34
+mana = 0
+level = 0
+flags = 0
+words = { al evo para para }
+comment = "Get Item"
+
+# Spell 35 - Get Item
+number = 35
+mana = 0
+level = 0
+flags = 0
+words = { al evo para }
+comment = "Get Item"
+
+# Spell 37 - Move
+number = 37
+mana = 0
+level = 0
+flags = 0
+words = { al ani para }
+comment = "Move"
+
+# Spell 38 - Creature Illusion
+number = 38
+mana = 100
+level = 23
+flags = 0
+words = { ut evo res ina para }
+comment = "Creature Illusion"
+
+# Spell 39 - Strong Haste
+number = 39
+mana = 100
+level = 20
+flags = 2
+words = { ut ani gran hur }
+comment = "Strong Haste"
+
+# Spell 40 - Get Experience
+number = 40
+mana = 0
+level = 0
+flags = 0
+words = { al evo cogni para }
+comment = "Get Experience"
+
+# Spell 41 - Change Data
+number = 41
+mana = 0
+level = 0
+flags = 0
+words = { al eta para }
+comment = "Change Data"
+
+# Spell 42 - Food
+number = 42
+mana = 120
+level = 14
+soulpoints = 1
+flags = 0
+words = { ex evo pan }
+comment = "Food"
+
+# Spell 44 - Magic Shield
+number = 44
+mana = 50
+level = 14
+flags = 0
+words = { ut amo vita }
+comment = "Magic Shield"
+
+# Spell 45 - Invisible
+number = 45
+mana = 440
+level = 35
+flags = 0
+words = { ut ana vid }
+comment = "Invisible"
+
+# Spell 46 - Get Skill Experience
+number = 46
+mana = 0
+level = 0
+flags = 0
+words = { al evo cogni para para }
+comment = "Get Skill Experience"
+
+# Spell 47 - Teleport to Friend
+number = 47
+mana = 0
+level = 0
+flags = 0
+words = { al ani sio para }
+comment = "Teleport to Friend"
+
+# Spell 48 - Poisoned Arrow
+number = 48
+mana = 130
+level = 16
+soulpoints = 2
+flags = 0
+words = { ex evo con pox }
+comment = "Poisoned Arrow"
+
+# Spell 49 - Explosive Arrow
+number = 49
+mana = 290
+level = 25
+soulpoints = 3
+flags = 0
+words = { ex evo con flam }
+comment = "Explosive Arrow"
+
+# Spell 50 - Soulfire (rune)
+number = 50
+mana = 600
+level = 27
+runegroup = 79
+runenumber = 48
+flags = 3
+amount = 2
+runelevel = 7
+soulpoints = 3
+words = { ad evo res flam }
+comment = "Soulfire"
+
+# Spell 51 - Conjure Arrow
+number = 51
+mana = 100
+level = 13
+soulpoints = 1
+flags = 0
+words = { ex evo con }
+comment = "Conjure Arrow"
+
+# Spell 52 - Retrieve Friend
+number = 52
+mana = 0
+level = 0
+flags = 0
+words = { al liber sio para }
+comment = "Retrieve Friend"
+
+# Spell 53 - Summon Wild Creature
+number = 53
+mana = 0
+level = 0
+flags = 0
+words = { al evo res para }
+comment = "Summon Wild Creature"
+
+# Spell 54 - Paralyze (rune)
+number = 54
+mana = 1400
+level = 54
+runegroup = 79
+runenumber = 18
+flags = 3
+amount = 1
+runelevel = 18
+soulpoints = 3
+words = { ad ana ani }
+comment = "Paralyze"
+
+# Spell 55 - Energybomb (rune)
+number = 55
+mana = 880
+level = 37
+runegroup = 79
+runenumber = 2
+flags = 3
+amount = 2
+runelevel = 10
+soulpoints = 5
+words = { ad evo mas vis }
+comment = "Energybomb"
+
+# Spell 56 - Poison Storm
+number = 56
+mana = 600
+level = 50
+flags = 3
+words = { ex evo gran mas pox }
+comment = "Poison Storm"
+
+# Spell 57 - Banish Account
+number = 57
+mana = 0
+level = 0
+flags = 0
+words = { om ana liber para para para }
+comment = "Banish Account"
+
+# Spell 58 - Get Position
+number = 58
+mana = 0
+level = 0
+flags = 0
+words = { al iva tera }
+comment = "Get Position"
+
+# Spell 60 - Temple Teleport
+number = 60
+mana = 0
+level = 0
+flags = 0
+words = { om ani para }
+comment = "Temple Teleport"
+
+# Spell 61 - Delete Account
+number = 61
+mana = 0
+level = 0
+flags = 0
+words = { om ana gran liber para para }
+comment = "Delete Account"
+
+# Spell 62 - Set Namerule
+number = 62
+mana = 0
+level = 0
+flags = 0
+words = { om amo para }
+comment = "Set Namerule"
+
+# Spell 63 - Create Gold
+number = 63
+mana = 0
+level = 0
+flags = 0
+words = { al evo vis para }
+comment = "Create Gold"
+
+# Spell 64 - Change Profession or Sex
+number = 64
+mana = 0
+level = 0
+flags = 0
+words = { al eta vita para }
+comment = "Change Profession or Sex"
+
+# Spell 65 - Entry in Criminal Record
+number = 65
+mana = 0
+level = 0
+flags = 0
+words = { om isa para para }
+comment = "Entry in Criminal Record"
+
+# Spell 66 - Namelock
+number = 66
+mana = 0
+level = 0
+flags = 0
+words = { om ana hora para }
+comment = "Namelock"
+
+# Spell 67 - Kick Player
+number = 67
+mana = 0
+level = 0
+flags = 0
+words = { om ana para }
+comment = "Kick Player"
+
+# Spell 68 - Delete Character
+number = 68
+mana = 0
+level = 0
+flags = 0
+words = { om ana gran res para para }
+comment = "Delete Character"
+
+# Spell 69 - Banish IP Address
+number = 69
+mana = 0
+level = 0
+flags = 0
+words = { om ana vis para para }
+comment = "Banish IP Address"
+
+# Spell 70 - Banish Character
+number = 70
+mana = 0
+level = 0
+flags = 0
+words = { om ana res para para para }
+comment = "Banish Character"
+
+# Spell 71 - Invite Guests
+number = 71
+mana = 0
+level = 0
+flags = 0
+words = { al eta sio }
+comment = "Invite Guests"
+
+# Spell 72 - Invite Subowners
+number = 72
+mana = 0
+level = 0
+flags = 0
+words = { al eta som }
+comment = "Invite Subowners"
+
+# Spell 73 - Kick Guest
+number = 73
+mana = 0
+level = 0
+flags = 0
+words = { al ana sio para }
+comment = "Kick Guest"
+
+# Spell 74 - Edit Door
+number = 74
+mana = 0
+level = 0
+flags = 0
+words = { al eta grav }
+comment = "Edit Door"
+
+# Spell 75 - Ultimate Light
+number = 75
+mana = 140
+level = 26
+flags = 2
+words = { ut evo vis lux }
+comment = "Ultimate Light"
+
+# Spell 76 - Magic Rope
+number = 76
+mana = 20
+level = 9
+flags = 2
+words = { ex ani tera }
+comment = "Magic Rope"
+
+# Spell 77 - Envenom (rune)
+number = 77
+mana = 400
+level = 21
+runegroup = 79
+runenumber = 32
+flags = 3
+amount = 1
+runelevel = 4
+soulpoints = 2
+words = { ad evo res pox }
+comment = "Envenom"
+
+# Spell 78 - Desintegrate (rune)
+number = 78
+mana = 200
+level = 21
+runegroup = 79
+runenumber = 50
+amount = 3
+runelevel = 4
+soulpoints = 3
+flags = 3
+words = { ad ito tera }
+comment = "Desintegrate"
+
+# Spell 79 - Conjure Bolt
+number = 79
+mana = 140
+level = 17
+soulpoints = 2
+flags = 2
+words = { ex evo con mort }
+comment = "Conjure Bolt"
+
+# Spell 80 - Berserk
+number = 80
+mana = 0
+level = 35
+flags = 7
+words = { ex ori }
+comment = "Berserk"
+
+# Spell 81 - Levitate
+number = 81
+mana = 50
+level = 12
+flags = 2
+words = { ex ani hur para }
+comment = "Levitate"
+
+# Spell 82 - Mass Healing
+number = 82
+mana = 150
+level = 36
+flags = 10
+words = { ex ura gran mas res }
+comment = "Mass Healing"
+
+# Spell 83 - Animate Dead (rune)
+number = 83
+mana = 600
+level = 27
+runegroup = 79
+runenumber = 56
+amount = 1
+runelevel = 4
+soulpoints = 5
+flags = 3
+words = { ad ana mort }
+comment = "Animate Dead"
+
+# Spell 84 - Heal Friend
+number = 84
+mana = 70
+level = 18
+flags = 10
+words = { ex ura sio para }
+comment = "Heal Friend"
+
+# Spell 85 - Undead Legion
+number = 85
+mana = 500
+level = 30
+flags = 3
+words = { ex ana mas mort }
+comment = "Undead Legion"
+
+# Spell 86 - Magic Wall (rune)
+number = 86
+mana = 750
+level = 32
+runegroup = 79
+runenumber = 33
+amount = 3
+runelevel = 9
+soulpoints = 5
+flags = 3
+words = { ad evo grav tera }
+comment = "Magic Wall"
+
+# Spell 87 - Force Strike
+number = 87
+mana = 20
+level = 11
+flags = 3
+words = { ex ori mort }
+comment = "Force Strike"
+
+# Spell 88 - Energy Strike
+number = 88
+mana = 20
+level = 12
+flags = 3
+words = { ex ori vis }
+comment = "Energy Strike"
+
+# Spell 89 - Flame Strike
+number = 89
+mana = 20
+level = 12
+flags = 3
+words = { ex ori flam }
+comment = "Flame Strike"
+
+# Spell 90 - Cancel Invisibility
+number = 90
+mana = 200
+level = 26
+flags = 2
+words = { ex ana ina }
+comment = "Cancel Invisibility"
+
+# Spell 91 - Poisonbomb (rune)
+number = 91
+mana = 520
+level = 25
+runegroup = 79
+runenumber = 26
+flags = 3
+amount = 2
+runelevel = 4
+soulpoints = 2
+words = { ad evo mas pox }
+comment = "Poisonbomb"
+
+# Spell 92 - Enchant Staff
+number = 92
+mana = 80
+level = 41
+flags = 2
+words = { ex eta vis }
+comment = "Enchant Staff"
+
+# Spell 93 - Challenge
+number = 93
+mana = 30
+level = 20
+flags = 3
+words = { ex eta res }
+comment = "Challenge"
+
+# Spell 94 - Wild Growth
+number = 94
+mana = 220
+level = 27
+flags = 3
+words = { ex evo grav vita }
+comment = "Wild Growth"
+
+# Spell 95 - Power Bolt
+number = 95
+mana = 800
+level = 59
+soulpoints = 3
+flags = 2
+words = { ex evo con vis }
+comment = "Power Bolt"
+
+# Spell 96 - Get Quest Value
+number = 96
+mana = 0
+level = 0
+flags = 0
+words = { al iva cogni para }
+comment = "Get Quest Value"
+
+# Spell 97 - Set Quest Value
+number = 97
+mana = 0
+level = 0
+flags = 0
+words = { al eta cogni para para }
+comment = "Set Quest Value"
+
+# Spell 98 - Desintegrate Spell
+number = 98
+mana = 0
+level = 0
+flags = 0
+words = { al ito tera }
+comment = "Desintegrate Spell"
+
+# Spell 99 - Levitate Gamemaster
+number = 99
+mana = 0
+level = 0
+flags = 0
+words = { al ani hur para }
+comment = "Levitate Gamemaster"
+
+# Spell 100 - Clear Quest Values
+number = 100
+mana = 0
+level = 0
+flags = 0
+words = { al ana cogni }
+comment = "Clear Quest Values"
+
+# Spell 101 - Kill All Creatures
+number = 101
+mana = 0
+level = 0
+flags = 0
+words = { al ito mas res }
+comment = "Kill All Creatures"
+
+# Spell 102 - Start Monsterraid
+number = 102
+mana = 0
+level = 0
+flags = 0
+words = { al evo mas res para }
+comment = "Start Monsterraid"
+
+# -----------------------------------------------------------------------------
+# example of adding a completely new spell using the template mechanism
+# this spell behaves exactly like spell 1 (light healing) but overrides the
+# healing amount to 10 and consumes only 10 mana.
+#
+# `template` causes any field that is not explicitly set to be copied from
+# the referenced spell after the file is loaded.
+
+number = 103
+template = 1   # inherit from light healing
+mana = 10      # override cost
+level = 1      # minimum level for use
+flags = 8
+param1 = 10    # min damage/amount
+param2 = 0     # delta (zero -> fixed)
+words = { ex ura }
+comment = "Tiny heal 10 (based on spell 1)"
+
+# End of spells
+

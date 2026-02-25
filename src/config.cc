@@ -82,7 +82,9 @@ void ReadConfig(void){
 	DebugLevel = 1;
 	WorldType = NORMAL;
 	BINPATH[0] = 0;
-	DATAPATH[0] = 0;
+	// Default data path to "dat" so external data files (e.g. spells.dat)
+	// are loaded from the repository's `dat/` directory by default.
+	strcpy(DATAPATH, "dat");
 	LOGPATH[0] = 0;
 	MAPPATH[0] = 0;
 	MONSTERPATH[0] = 0;

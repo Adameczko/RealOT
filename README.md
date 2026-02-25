@@ -9,6 +9,10 @@ The legal status of decompiled and rewritten code is a gray area. While the proj
 
 - Custom RSA routines were replaced with OpenSSL's libcrypto. I didn't bother to translate the decompiled routines because it would be annoying to get right and could end up with security issues. This introduces the **ONLY** dependency required to compile but is fairly simple to get it installed on most Linux distros. For example, on Debian you can use `apt install libssl-dev`.
 
+- The spell system has been converted from a huge hardcoded table in `magic.cc` to a fully data-driven configuration.
+  All spell attributes (mana cost, level, words, visual effects, animations, etc.) are now stored in `dat/spells.dat` and loaded at startup.  A `template` field allows new spells to inherit from existing ones, and changes to the file can be applied at runtime via `SpellsReload()` (or by restarting the server).
+  This makes it easy to add or tweak spells without recompiling the binary – just edit `dat/spells.dat`.
+
 ## Future
 I had a small *TODO* list with a few things to attempt after the server was up and running but I think that trying to modernize it further or get it to run on Windows wouldn't really add any value, plus it would probably require a lot of extra time. My commitment is to fix all reported bugs and perhaps string handling/building which is kind of a disaster. Exceptions are already too engraved into the codebase, to the point it would make more sense to rewrite everything without them rather than attempting to remove them.
 
