@@ -1,5 +1,6 @@
 #include "cr.hh"
 #include "operate.hh"
+#include "config.hh"
 
 #include <math.h>
 
