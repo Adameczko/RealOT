@@ -1,0 +1,26 @@
+# Basic SYSTEMD service file for the Tibia Game Server
+
+[Unit]
+Description=Tibia Game Server
+After=network.target tibia-querymanager.service
+Requires=tibia-querymanager.service
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=simple
+User=tibia-game
+Group=tibia-game
+ExecStart=/opt/tibia/game/bin/game
+WorkingDirectory=/opt/tibia/game
+Restart=always
+RestartSec=10
+# After a SIGTERM, the server will issue shutdown warnings for 5 minutes and
+# take another minute or two to save everything and exit. Not waiting for this
+# process to complete would cause data to not be properly saved.
+TimeoutStopSec=600
+LimitCORE=infinity
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=%n
