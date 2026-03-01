@@ -2027,7 +2027,11 @@ TMonster::TMonster(int Race, int x, int y, int z, int Home, uint32 MasterID) :
 								0);
 			for(int i = 1; i <= RaceData[Race].Items; i += 1){
 				TItemData *ItemData = RaceData[Race].Item.at(i);
-				if(random(0, 999) > ItemData->Probability){
+				int Prob = ItemData->Probability;
+				if(LOOT_RATE != 1){
+					Prob = std::min<int>(999, Prob * LOOT_RATE);
+				}
+				if(random(0, 999) > Prob){
 					continue;
 				}
 

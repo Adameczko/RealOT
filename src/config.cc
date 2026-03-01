@@ -43,6 +43,17 @@ TDatabaseSettings MANAGER_DATABASE;
 int NumberOfQueryManagers;
 TQueryManagerSettings QUERY_MANAGER[10];
 
+// Experience / rates
+int EXP_RATE;
+TExpStage EXP_STAGE[20];
+int NumberOfExpStages;
+
+int MAGIC_RATE;
+int MELEE_RATE;
+int DISTANCE_RATE;
+int SHIELDING_RATE;
+int LOOT_RATE;
+
 static char PasswordKey[9] = "Pm-,o%yD";
 
 static void DisguisePassword(char *Password, char *Key){
@@ -99,6 +110,15 @@ void ReadConfig(void){
 	NumberOfQueryManagers = 0;
 	Beat = 200;
 	RebootTime = 540;
+
+	// rates defaults
+	EXP_RATE = 1;
+	NumberOfExpStages = 0;
+	MAGIC_RATE = 1;
+	MELEE_RATE = 1;
+	DISTANCE_RATE = 1;
+	SHIELDING_RATE = 1;
+	LOOT_RATE = 1;
 	ADMIN_DATABASE.Database[0] = 0;
 	VOLATILE_DATABASE.Database[0] = 0;
 	WEB_DATABASE.Database[0] = 0;
@@ -272,6 +292,36 @@ void ReadConfig(void){
 				Script.readSymbol(')');
 				NumberOfQueryManagers += 1;
 			}while(Script.readSpecial() != '}');
+		}else if(strcmp(Identifier, "exprate") == 0){
+			EXP_RATE = Script.readNumber();
+		}else if(strcmp(Identifier, "expstages") == 0){
+			Script.readSymbol('{');
+			do{
+				if(NumberOfExpStages >= NARRAY(EXP_STAGE)){
+					Script.error("Too many exp stages");
+				}
+				Script.readSymbol('(');
+				int Min = Script.readNumber();
+				Script.readSymbol(',');
+				int Max = Script.readNumber();
+				Script.readSymbol(',');
+				int Rate = Script.readNumber();
+				Script.readSymbol(')');
+				EXP_STAGE[NumberOfExpStages].MinLevel = Min;
+				EXP_STAGE[NumberOfExpStages].MaxLevel = Max;
+				EXP_STAGE[NumberOfExpStages].Rate = Rate;
+				NumberOfExpStages += 1;
+			}while(Script.readSpecial() != '}');
+		}else if(strcmp(Identifier, "magicrate") == 0){
+			MAGIC_RATE = Script.readNumber();
+		}else if(strcmp(Identifier, "meleerate") == 0){
+			MELEE_RATE = Script.readNumber();
+		}else if(strcmp(Identifier, "distancerate") == 0){
+			DISTANCE_RATE = Script.readNumber();
+		}else if(strcmp(Identifier, "shieldingrate") == 0){
+			SHIELDING_RATE = Script.readNumber();
+		}else if(strcmp(Identifier, "lootrate") == 0){
+			LOOT_RATE = Script.readNumber();
 		}else{
 			// TODO(fusion):
 			//error("Unknown configuration key \"%s\"", Identifier);

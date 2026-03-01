@@ -56,6 +56,22 @@ extern TDatabaseSettings MANAGER_DATABASE;
 extern int NumberOfQueryManagers;
 extern TQueryManagerSettings QUERY_MANAGER[10];
 
+// Experience / rates
+extern int EXP_RATE; // global experience multiplier (1 = base)
+struct TExpStage {
+    int MinLevel;
+    int MaxLevel;
+    int Rate; // multiplier (e.g., 5 = x5)
+};
+extern int NumberOfExpStages;
+extern TExpStage EXP_STAGE[20];
+
+extern int MAGIC_RATE;
+extern int MELEE_RATE;
+extern int DISTANCE_RATE;
+extern int SHIELDING_RATE;
+extern int LOOT_RATE;
+
 void ReadConfig(void);
 
 #endif //TIBIA_CONFIG_HH_

@@ -389,13 +389,35 @@ void TSkillProbe::Increase(int Amount){
 		return;
 	}
 
+	// scale skill gain by configured rates
+	long long ScaledAmount = Amount;
+	if(this->Master != NULL && this->Master->Type == PLAYER){
+		switch(this->SkNr){
+			case SKILL_MAGIC_LEVEL:
+				ScaledAmount = ScaledAmount * (long long)MAGIC_RATE; break;
+			case SKILL_DISTANCE:
+				ScaledAmount = ScaledAmount * (long long)DISTANCE_RATE; break;
+			case SKILL_SHIELDING:
+				ScaledAmount = ScaledAmount * (long long)SHIELDING_RATE; break;
+			case SKILL_FIST:
+			case SKILL_CLUB:
+			case SKILL_SWORD:
+			case SKILL_AXE:
+				ScaledAmount = ScaledAmount * (long long)MELEE_RATE; break;
+			default:
+				break;
+		}
+	}
+	if(ScaledAmount > INT_MAX) ScaledAmount = INT_MAX;
+	int UseAmount = (int)ScaledAmount;
+
 	int OldProgress = this->GetProgress();
 
 	// TODO(fusion): This could probably be an oversight but the decompiled
 	// function was calling `GetExpForLevel` twice instead of using `NextLevel`
 	// which makes me wonder whether `NextLevel` is properly initialized.
 	int Range = 0;
-	this->Exp += Amount;
+	this->Exp += UseAmount;
 	while(this->Exp >= this->NextLevel){
 		this->Act += 1;
 		this->LastLevel = this->NextLevel;

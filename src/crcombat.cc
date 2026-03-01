@@ -946,7 +946,20 @@ void TCombat::DistributeExperiencePoints(uint32 Exp){
 				}
 			}
 
-			Attacker->Skills[SKILL_LEVEL]->Increase(Amount);
+				// apply global or stage-specific experience multiplier
+				int AttLevelForRate = Attacker->Skills[SKILL_LEVEL]->Get();
+				int Rate = EXP_RATE;
+				for(int s = 0; s < NumberOfExpStages; s += 1){
+					if(AttLevelForRate >= EXP_STAGE[s].MinLevel && AttLevelForRate <= EXP_STAGE[s].MaxLevel){
+						Rate = EXP_STAGE[s].Rate;
+						break;
+					}
+				}
+				long long ScaledAmount = (long long)Amount * (long long)Rate;
+				if(ScaledAmount > INT_MAX) ScaledAmount = INT_MAX;
+				Amount = (int)ScaledAmount;
+
+				Attacker->Skills[SKILL_LEVEL]->Increase(Amount);
 			TextualEffect(Attacker->CrObject, COLOR_WHITE, "%d", Amount);
 		}
 	}

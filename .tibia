@@ -1,0 +1,44 @@
+# Tibia - Graphical Multi-User-Dungeon
+# .tibia: Konfigurationsdatei (Game-Server)
+
+# Verzeichnisse
+BINPATH     = "/game/bin"
+MAPPATH     = "/game/map"
+ORIGMAPPATH = "/game/origmap"
+DATAPATH    = "/game/dat"
+USERPATH    = "/game/usr"
+LOGPATH     = "/game/log"
+SAVEPATH    = "/game/save"
+MONSTERPATH = "/game/mon"
+NPCPATH     = "/game/npc"
+
+# SharedMemories
+SHM = 10011
+
+# DebugLevel
+DebugLevel = 2
+
+# Server-Takt
+Beat = 50
+
+# QueryManager
+QueryManager = {("127.0.0.1",7173,"nXE?/>j`"),("127.0.0.1",7174,"nXE?/>j`"),("127.0.0.1",7175,"nXE?/>j`"),("127.0.0.1",7176,"nXE?/>j`")}
+
+# Weltstatus
+World = "Zanera"
+State = public
+
+# Experience and rates
+# Global experience multiplier (1 = base)
+Exprate = 1
+
+# Exp stages: list of (MinLevel,MaxLevel,Rate)
+# Example: levels 1-20 use x5, 21-50 use x3
+Expstages = {(1,20,5),(21,50,3)}
+
+# Skill/loot rates (integers, 1 = base)
+MagicRate = 1
+MeleeRate = 1
+DistanceRate = 1
+ShieldingRate = 1
+LootRate = 1
