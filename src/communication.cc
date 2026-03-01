@@ -1452,11 +1452,9 @@ bool OpenSocket(void){
 	struct sockaddr_in ServerAddress = {};
 	ServerAddress.sin_family = AF_INET;
 	ServerAddress.sin_port = htons(GamePort);
-#if BIND_ACCEPTOR_TO_GAME_ADDRESS
-	ServerAddress.sin_addr.s_addr = inet_addr(GameAddress);
-#else
+
 	ServerAddress.sin_addr.s_addr = htonl(INADDR_ANY);
-#endif
+
 	if(bind(TCPSocket, (struct sockaddr*)&ServerAddress, sizeof(ServerAddress)) == -1){
 		error("LaunchServer: Failed to bind to acceptor to %s:%d: (%d) %s.\n",
 				inet_ntoa(ServerAddress.sin_addr), GamePort, errno, strerrordesc_np(errno));
