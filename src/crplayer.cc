@@ -72,6 +72,12 @@ TPlayer::TPlayer(TConnection *Connection, uint32 CharacterID):
 		this->QuestValues[QuestNr] = 0;
 	}
 
+	for(int Race = 0;
+			Race < NARRAY(this->MonsterKills);
+			Race += 1){
+		this->MonsterKills[Race] = 0;
+	}
+
 	for(int ContainerNr = 0;
 			ContainerNr < NARRAY(this->OpenContainer);
 			ContainerNr += 1){
@@ -279,6 +285,12 @@ TPlayer::~TPlayer(void){
 					QuestNr < NARRAY(PlayerData->QuestValues);
 					QuestNr += 1){
 				PlayerData->QuestValues[QuestNr] = 0;
+			}
+
+			for(int Race = 0;
+					Race < NARRAY(PlayerData->MonsterKills);
+					Race += 1){
+				PlayerData->MonsterKills[Race] = 0;
 			}
 
 			// NOTE(fusion): This is used to reset skills back to default. See
@@ -524,6 +536,13 @@ void TPlayer::LoadData(void){
 		this->QuestValues[QuestNr] = PlayerData->QuestValues[QuestNr];
 	}
 
+	STATIC_ASSERT(NARRAY(this->MonsterKills) == NARRAY(PlayerData->MonsterKills));
+	for(int Race = 0;
+			Race < NARRAY(this->MonsterKills);
+			Race += 1){
+		this->MonsterKills[Race] = PlayerData->MonsterKills[Race];
+	}
+
 	// NOTE(fusion): `Minimum` is set to `INT_MIN` to skip loading a skill, and
 	// stick with the race's default.
 	this->SetSkills(PlayerData->Race);
@@ -591,6 +610,13 @@ void TPlayer::SaveData(void){
 			QuestNr < NARRAY(this->QuestValues);
 			QuestNr += 1){
 		PlayerData->QuestValues[QuestNr] = this->QuestValues[QuestNr];
+	}
+
+	STATIC_ASSERT(NARRAY(this->MonsterKills) == NARRAY(PlayerData->MonsterKills));
+	for(int Race = 0;
+			Race < NARRAY(this->MonsterKills);
+			Race += 1){
+		PlayerData->MonsterKills[Race] = this->MonsterKills[Race];
 	}
 
 	STATIC_ASSERT(NARRAY(this->Skills) == NARRAY(PlayerData->Actual));
@@ -2301,7 +2327,36 @@ bool LoadPlayerData(TPlayerData *Slot){
 			Script.readSymbol(')');
 		}
 
-		Script.readIdentifier(); // "murders"
+		const char *Identifier = Script.readIdentifier();
+		if(strcmp(Identifier, "monsterkills") == 0){
+			Script.readSymbol('=');
+			Script.readSymbol('{');
+			while(true){
+				char Special = Script.readSpecial();
+				if(Special == '}'){
+					break;
+				}else if(Special == ','){
+					continue;
+				}else if(Special != '('){
+					Script.error("'(' expected");
+				}
+
+				int Race = Script.readNumber();
+				if(Race < 0 || Race >= NARRAY(Slot->MonsterKills)){
+					Script.error("illegal race number");
+				}
+
+				Script.readSymbol(',');
+				Slot->MonsterKills[Race] = Script.readNumber();
+				Script.readSymbol(')');
+			}
+
+			Identifier = Script.readIdentifier();
+		}
+
+		if(strcmp(Identifier, "murders") != 0){
+			Script.error("'Murders' expected");
+		}
 		Script.readSymbol('=');
 		Script.readSymbol('{');
 		while(true){
@@ -2546,6 +2601,26 @@ void SavePlayerData(TPlayerData *Slot){
 				Script.writeNumber(Slot->QuestValues[QuestNr]);
 				Script.writeText(")");
 				FirstQuest = false;
+			}
+		}
+		Script.writeText("}");
+		Script.writeLn();
+
+		bool FirstMonster = true;
+		Script.writeText("MonsterKills = {");
+		for(int Race = 0;
+				Race < NARRAY(Slot->MonsterKills);
+				Race += 1){
+			if(Slot->MonsterKills[Race] != 0){
+				if(!FirstMonster){
+					Script.writeText(",");
+				}
+				Script.writeText("(");
+				Script.writeNumber(Race);
+				Script.writeText(",");
+				Script.writeNumber(Slot->MonsterKills[Race]);
+				Script.writeText(")");
+				FirstMonster = false;
 			}
 		}
 		Script.writeText("}");

@@ -899,6 +899,8 @@ uint32 TCombat::GetMostDangerousAttacker(void){
 
 void TCombat::DistributeExperiencePoints(uint32 Exp){
 	TCreature *Master = this->Master;
+	TPlayer *BestiaryPlayer = NULL;
+	int BestiaryAmount = 0;
 	print(3, "%s ist gestorben. Verteile %u EXP...\n", Master->Name, Exp);
 	if(this->CombatDamage == 0){
 		return;
@@ -959,9 +961,21 @@ void TCombat::DistributeExperiencePoints(uint32 Exp){
 				if(ScaledAmount > INT_MAX) ScaledAmount = INT_MAX;
 				Amount = (int)ScaledAmount;
 
+				if(Attacker->Type == PLAYER && Amount > BestiaryAmount){
+					BestiaryPlayer = (TPlayer*)Attacker;
+					BestiaryAmount = Amount;
+				}
+
 				Attacker->Skills[SKILL_LEVEL]->Increase(Amount);
 			TextualEffect(Attacker->CrObject, COLOR_WHITE, "%d", Amount);
 		}
+	}
+
+	if(Master->Type == MONSTER
+			&& BestiaryPlayer != NULL
+			&& Master->Race >= 0
+			&& Master->Race < NARRAY(BestiaryPlayer->MonsterKills)){
+		BestiaryPlayer->MonsterKills[Master->Race] += 1;
 	}
 }
 

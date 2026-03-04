@@ -14,6 +14,73 @@
 static int Skip = -1;
 static TConnection *FirstSendingConnection;
 
+static void GetHunterLogText(TPlayer *Player, char *Text, int Capacity){
+	if(Text == NULL || Capacity <= 0){
+		error("GetHunterLogText: Invalid output buffer.\n");
+		return;
+	}
+
+	Text[0] = 0;
+	if(Player == NULL){
+		strncpy(Text, "No monster kills recorded.", Capacity - 1);
+		Text[Capacity - 1] = 0;
+		return;
+	}
+
+	int SortedRaces[MAX_RACES];
+	int Entries = 0;
+	for(int Race = 0; Race < MAX_RACES; Race += 1){
+		if(Player->MonsterKills[Race] <= 0 || RaceData[Race].Name[0] == 0){
+			continue;
+		}
+
+		int InsertPos = Entries;
+		while(InsertPos > 0
+				&& stricmp(RaceData[SortedRaces[InsertPos - 1]].Name, RaceData[Race].Name) > 0){
+			SortedRaces[InsertPos] = SortedRaces[InsertPos - 1];
+			InsertPos -= 1;
+		}
+
+		SortedRaces[InsertPos] = Race;
+		Entries += 1;
+	}
+
+	if(Entries == 0){
+		strncpy(Text, "No monster kills recorded.", Capacity - 1);
+		Text[Capacity - 1] = 0;
+		return;
+	}
+
+	int WritePos = 0;
+	for(int i = 0; i < Entries; i += 1){
+		int Race = SortedRaces[i];
+		int Remaining = Capacity - WritePos;
+		if(Remaining <= 1){
+			break;
+		}
+
+		int Written = snprintf(
+				&Text[WritePos],
+				(size_t)Remaining,
+				"%s: %d%s",
+				RaceData[Race].Name,
+				Player->MonsterKills[Race],
+				(i + 1 < Entries ? "\n" : ""));
+		if(Written < 0){
+			break;
+		}
+
+		if(Written >= Remaining){
+			WritePos = Capacity - 1;
+			break;
+		}
+
+		WritePos += Written;
+	}
+
+	Text[WritePos] = 0;
+}
+
 void SendAll(void){
 	TConnection *Connection = FirstSendingConnection;
 	FirstSendingConnection = NULL;
@@ -1092,7 +1159,14 @@ void SendEditText(TConnection *Connection, Object Obj){
 	const char *Text = NULL;
 	const char *Editor = NULL;
 	char SpellbookBuffer[4096] = {};
-	if(ObjType.getFlag(WRITE) || ObjType.getFlag(WRITEONCE)){
+	char HunterLogBuffer[8192] = {};
+	ObjectType HuntersLogType = GetSpecialObject(HUNTERS_LOG);
+	if(HuntersLogType.TypeID != 0 && ObjType.TypeID == HuntersLogType.TypeID){
+		TPlayer *Player = Connection->GetPlayer();
+		GetHunterLogText(Player, HunterLogBuffer, sizeof(HunterLogBuffer));
+		Text = HunterLogBuffer;
+		MaxLength = strlen(Text);
+	}else if(ObjType.getFlag(WRITE) || ObjType.getFlag(WRITEONCE)){
 		MaxLength = (ObjType.getFlag(WRITE)
 				? (int)ObjType.getAttribute(MAXLENGTH)
 				: (int)ObjType.getAttribute(MAXLENGTHONCE));

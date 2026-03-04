@@ -144,6 +144,7 @@ struct TPlayerData {
 	int Delta[25];
 	uint8 SpellList[256];
 	int QuestValues[500];
+	int MonsterKills[512];
 	int MurderTimestamps[20];
 	uint8 *Inventory;
 	int InventorySize;
@@ -913,6 +914,7 @@ struct TPlayer: TCreature {
 	int TutorActivities;
 	uint8 SpellList[256];
 	int QuestValues[500];
+	int MonsterKills[512];
 	Object OpenContainer[16];
 	vector<uint32> AttackedPlayers;
 	int NumberOfAttackedPlayers;

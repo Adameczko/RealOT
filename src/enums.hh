@@ -606,6 +606,7 @@ enum SPECIALMEANING: int {
 	PARCEL_LABEL						= 24,
 	LETTER_NEW							= 25,
 	LETTER_STAMPED						= 26,
+	HUNTERS_LOG							= 27,
 	BLOOD_SPLASH						= 30,
 	BLOOD_POOL							= 31,
 	RUNE_BLANK							= 40,
