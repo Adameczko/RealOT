@@ -135,7 +135,7 @@ void ReadConfig(void){
 		snprintf(FileName, sizeof(FileName), ".tibia");
 	}
 #else
-	snprintf(FileName, sizeof(FileName), "../.tibia");
+	snprintf(FileName, sizeof(FileName), ".tibia");
 #endif
 
 	if(!FileExists(FileName)){
