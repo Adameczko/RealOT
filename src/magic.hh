@@ -183,6 +183,8 @@ void ChangeProfession(TCreature *Actor, const char *Param);
 void EditGuests(TCreature *Actor);
 void EditSubowners(TCreature *Actor);
 void EditNameDoor(TCreature *Actor);
+void BuyHouse(TCreature *Actor, int ManaPoints, int SoulPoints);
+void LeaveHouse(TCreature *Actor, int ManaPoints, int SoulPoints);
 void KickGuest(TCreature *Actor, const char *GuestName);
 void Notation(TCreature *Actor, const char *Name, const char *Comment);
 void NameLock(TCreature *Actor, const char *Name);

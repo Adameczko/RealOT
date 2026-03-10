@@ -3021,6 +3021,271 @@ void EditNameDoor(TCreature *Actor){
 	SendEditList(Actor->Connection, DOORLIST, Obj.ObjectID, DoorList);
 }
 
+void BuyHouse(TCreature *Actor, int ManaPoints, int SoulPoints){
+	if(Actor == NULL){
+		error("BuyHouse: Ungültige Kreatur übergeben.\n");
+		throw ERROR;
+	}
+
+	if(Actor->Type != PLAYER){
+		error("BuyHouse: Zauberspruch kann nur von Spielern angewendet werden.\n");
+		throw ERROR;
+	}
+
+	TPlayer *Player = (TPlayer*)Actor;
+	Log("houses", "BuyHouse: start player=%s pos=[%d,%d,%d] dir=%d\n",
+			Player->Name, Actor->posx, Actor->posy, Actor->posz, Actor->Direction);
+
+	if(!CheckRight(Actor->ID, PREMIUM_ACCOUNT)){
+		SendMessage(Actor->Connection, TALK_FAILURE_MESSAGE,
+			"You need a premium account to use this spell.");
+		return;
+	}
+
+	TSkill *Level = Actor->Skills[SKILL_LEVEL];
+	if(Level == NULL){
+		error("BuyHouse: Kein Skill LEVEL.\n");
+		throw ERROR;
+	}
+
+	if(Level->Get() < 15){
+		SendMessage(Actor->Connection, TALK_FAILURE_MESSAGE,
+			"You need to be at least level 15 to buy a house.");
+		return;
+	}
+
+	// Calculate position in front of player based on direction
+	int DoorX = Actor->posx;
+	int DoorY = Actor->posy;
+	int DoorZ = Actor->posz;
+
+	switch(Actor->Direction){
+		case DIRECTION_NORTH: DoorY -= 1; break;
+		case DIRECTION_EAST:  DoorX += 1; break;
+		case DIRECTION_SOUTH: DoorY += 1; break;
+		case DIRECTION_WEST:  DoorX -= 1; break;
+		default:{
+			error("BuyHouse: Ungültige Richtung %d.\n", Actor->Direction);
+			throw ERROR;
+		}
+	}
+
+	// Resolve target house from the tile in front of the player.
+	// Some map layouts place the front door tile outside of the house area,
+	// so we also probe one tile deeper in the same direction.
+	uint16 HouseID = GetHouseID(DoorX, DoorY, DoorZ);
+	if(HouseID == 0){
+		int InnerX = DoorX;
+		int InnerY = DoorY;
+
+		switch(Actor->Direction){
+			case DIRECTION_NORTH: InnerY -= 1; break;
+			case DIRECTION_EAST:  InnerX += 1; break;
+			case DIRECTION_SOUTH: InnerY += 1; break;
+			case DIRECTION_WEST:  InnerX -= 1; break;
+			default: break;
+		}
+
+		HouseID = GetHouseID(InnerX, InnerY, DoorZ);
+	}
+
+	Log("houses", "BuyHouse: resolved house=%d for player=%s\n", HouseID, Player->Name);
+
+	if(HouseID == 0){
+		SendMessage(Actor->Connection, TALK_FAILURE_MESSAGE,
+			"You must stand in front of a house door.");
+		return;
+	}
+
+	THouse *House = GetHouse(HouseID);
+	if(House == NULL){
+		error("BuyHouse: Haus mit ID %d existiert nicht.\n", HouseID);
+		throw ERROR;
+	}
+
+	// Check if house is available (no owner)
+	if(House->OwnerID != 0){
+		SendMessage(Actor->Connection, TALK_FAILURE_MESSAGE,
+			"This house already has an owner.");
+		return;
+	}
+
+	// Check if player already owns a house of this type (one regular house + one guildhall per account)
+	int OwnedHouses = CountHousesOwnedByAccount(Player->ID, House->GuildHouse);
+	if(OwnedHouses > 0){
+		const char *houseType = House->GuildHouse ? "guildhall" : "house";
+		char Message[200];
+		snprintf(Message, sizeof(Message),
+			"You already own a %s. You can only own one %s per account.",
+			houseType, houseType);
+		SendMessage(Actor->Connection, TALK_FAILURE_MESSAGE, "%s", Message);
+		return;
+	}
+
+	// Calculate required money (rent + first month's rent as purchase price)
+	int RequiredMoney = House->Rent * 2;
+
+	// Check if player has enough money
+	int PlayerMoney = CountInventoryMoney(Player->ID);
+	Log("houses", "BuyHouse: money check player=%s money=%d required=%d\n",
+			Player->Name, PlayerMoney, RequiredMoney);
+	if(PlayerMoney < RequiredMoney){
+		char Message[200];
+		snprintf(Message, sizeof(Message),
+			"You need %d gold to buy this house, but you only have %d gold.",
+			RequiredMoney, PlayerMoney);
+		SendMessage(Actor->Connection, TALK_FAILURE_MESSAGE, "%s", Message);
+		return;
+	}
+
+	// Calculate how much of each coin type to remove
+	int Crystal  = CountInventoryObjects(Player->ID, GetSpecialObject(MONEY_TENTHOUSAND), 0);
+	int Platinum = CountInventoryObjects(Player->ID, GetSpecialObject(MONEY_HUNDRED), 0);
+	int Gold     = CountInventoryObjects(Player->ID, GetSpecialObject(MONEY_ONE), 0);
+
+	CalculateChange(RequiredMoney, &Gold, &Platinum, &Crystal);
+	Log("houses", "BuyHouse: removing coins g=%d p=%d c=%d\n", Gold, Platinum, Crystal);
+
+	// Remove money from player's inventory using the NPC pattern
+	// We need to create temporary objects and delete them
+	if(Gold > 0){
+		int Remaining = Gold;
+		Object Obj = GetInventoryObject(Player->ID, GetSpecialObject(MONEY_ONE), 0);
+		while(Remaining > 0 && Obj != NONE){
+			int Amount = (int)Obj.getAttribute(AMOUNT);
+			if(Amount <= Remaining){
+				Remaining -= Amount;
+				DeleteObject(Obj);
+				Obj = GetInventoryObject(Player->ID, GetSpecialObject(MONEY_ONE), 0);
+			}else{
+				Change(Obj, AMOUNT, Amount - Remaining);
+				Remaining = 0;
+			}
+		}
+	}else if(Gold < 0){
+		// Give back change
+		CreateAtCreature(Player->ID, GetSpecialObject(MONEY_ONE), -Gold);
+	}
+
+	if(Platinum > 0){
+		int Remaining = Platinum;
+		Object Obj = GetInventoryObject(Player->ID, GetSpecialObject(MONEY_HUNDRED), 0);
+		while(Remaining > 0 && Obj != NONE){
+			int Amount = (int)Obj.getAttribute(AMOUNT);
+			if(Amount <= Remaining){
+				Remaining -= Amount;
+				DeleteObject(Obj);
+				Obj = GetInventoryObject(Player->ID, GetSpecialObject(MONEY_HUNDRED), 0);
+			}else{
+				Change(Obj, AMOUNT, Amount - Remaining);
+				Remaining = 0;
+			}
+		}
+	}else if(Platinum < 0){
+		// Give back change
+		CreateAtCreature(Player->ID, GetSpecialObject(MONEY_HUNDRED), -Platinum);
+	}
+
+	ASSERT(Crystal >= 0);
+	if(Crystal > 0){
+		int Remaining = Crystal;
+		Object Obj = GetInventoryObject(Player->ID, GetSpecialObject(MONEY_TENTHOUSAND), 0);
+		while(Remaining > 0 && Obj != NONE){
+			int Amount = (int)Obj.getAttribute(AMOUNT);
+			if(Amount <= Remaining){
+				Remaining -= Amount;
+				DeleteObject(Obj);
+				Obj = GetInventoryObject(Player->ID, GetSpecialObject(MONEY_TENTHOUSAND), 0);
+			}else{
+				Change(Obj, AMOUNT, Amount - Remaining);
+				Remaining = 0;
+			}
+		}
+	}
+
+	// Set player as owner and immediately save to database
+	int TimeStamp = (int)time(NULL);
+	int PaidUntil = TimeStamp + 30 * 24 * 3600; // Paid for 30 days
+	Log("houses", "BuyHouse: assigning owner house=%d player=%s paidUntil=%d\n",
+			HouseID, Player->Name, PaidUntil);
+	
+	if(!SetHouseOwner(HouseID, Player->ID, Player->Name, TimeStamp, PaidUntil)){
+		error("BuyHouse: Konnte Haus %d nicht an Spieler %s vergeben.\n", HouseID, Player->Name);
+		SendMessage(Actor->Connection, TALK_FAILURE_MESSAGE,
+			"An error occurred while processing the house purchase.");
+		return;
+	}
+
+	Log("houses", "BuyHouse: success player=%s house=%d\n", Player->Name, HouseID);
+
+	// Send success message and visual effect
+	char SuccessMsg[200];
+	snprintf(SuccessMsg, sizeof(SuccessMsg),
+		"Congratulations! You are now the owner of '%s'.",
+		House->Name);
+	SendMessage(Actor->Connection, TALK_STATUS_MESSAGE, "%s", SuccessMsg);
+	GraphicalEffect(Actor->posx, Actor->posy, Actor->posz, EFFECT_MAGIC_BLUE);
+}
+
+void LeaveHouse(TCreature *Actor, int ManaPoints, int SoulPoints){
+	if(Actor == NULL){
+		error("LeaveHouse: Ungültige Kreatur übergeben.\n");
+		throw ERROR;
+	}
+
+	if(Actor->Type != PLAYER){
+		error("LeaveHouse: Zauberspruch kann nur von Spielern angewendet werden.\n");
+		throw ERROR;
+	}
+
+	TPlayer *Player = (TPlayer*)Actor;
+
+	// Get player's current position
+	int PosX = Actor->posx;
+	int PosY = Actor->posy;
+	int PosZ = Actor->posz;
+
+	// Check if player is in a house
+	uint16 HouseID = GetHouseID(PosX, PosY, PosZ);
+	if(HouseID == 0){
+		SendMessage(Actor->Connection, TALK_FAILURE_MESSAGE, "You are not inside a house.");
+		return;
+	}
+
+	// Get house information
+	THouse *House = GetHouse(HouseID);
+	if(House == NULL){
+		error("LeaveHouse: House with ID %d does not exist.\n", HouseID);
+		throw ERROR;
+	}
+
+	// Check if player is the owner
+	if(!IsOwner(HouseID, Player)){
+		SendMessage(Actor->Connection, TALK_FAILURE_MESSAGE, "You are not the owner of this house.");
+		return;
+	}
+
+	// Remove ownership from database
+	if(!RemoveHouseOwner(HouseID)){
+		SendMessage(Actor->Connection, TALK_FAILURE_MESSAGE, "Failed to leave house. Please try again.");
+		return;
+	}
+
+	// Clear ownership in memory
+	ClearHouse(House);
+
+	// Teleport player outside the house
+	GraphicalEffect(Actor->posx, Actor->posy, Actor->posz, EFFECT_POFF);
+	Object Exit = GetMapContainer(House->ExitX, House->ExitY, House->ExitZ);
+	Move(0, Player->CrObject, Exit, -1, false, NONE);
+	GraphicalEffect(Player->CrObject, EFFECT_ENERGY);
+
+	Log("houses", "%s left house %d at [%d,%d,%d].\n",
+			Player->Name, HouseID, PosX, PosY, PosZ);
+
+	SendMessage(Actor->Connection, TALK_STATUS_MESSAGE, "You have left the house. Make sure to take your items with you - the house is now available for others.");
+}
+
 void KickGuest(TCreature *Actor, const char *GuestName){
 	if(Actor == NULL){
 		error("KickGuest(magic): Ungültige Kreatur übergeben.\n");
@@ -3356,6 +3621,8 @@ static void CharacterRightSpell(uint32 CreatureID, int SpellNr, const char (*Spe
 		case 100: ClearQuestValues(Actor); 							break;
 		case 101: KillAllMonsters(Actor, EFFECT_DEATH, 2); 			break;
 		case 102: StartMonsterraid(Actor, SpellStr[4]); 			break;
+			case 103: BuyHouse(Actor, 0, 0); 								break;
+			case 104: LeaveHouse(Actor, 0, 0); 							break;
 	}
 }
 
@@ -5150,6 +5417,18 @@ static void InitSpells(void){
 	Spell->Level = 0;
 	Spell->Flags = 0;
 	Spell->Comment = "Start Monsterraid";
+
+	Spell = CreateSpell(103, "al", "eta", "tera", "");
+	Spell->Mana = 0;
+	Spell->Level = 15;
+	Spell->Flags = 2;
+	Spell->Comment = "Buy House";
+
+	Spell = CreateSpell(104, "al", "eta", "ina", "");
+	Spell->Mana = 0;
+	Spell->Level = 0;
+	Spell->Flags = 0;
+	Spell->Comment = "Leave House";
 }
 
 void InitMagic(void){

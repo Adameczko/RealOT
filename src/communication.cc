@@ -38,7 +38,7 @@ static int ActiveConnections;
 static Semaphore RSAMutex(1);
 static TRSAPrivateKey PrivateKey;
 
-static TQueryManagerConnectionPool QueryManagerConnectionPool(10);
+TQueryManagerConnectionPool QueryManagerConnectionPool(10);
 static int LoadHistory[360];
 static int LoadHistoryPointer;
 static int TotalLoad;

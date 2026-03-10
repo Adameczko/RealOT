@@ -83,7 +83,8 @@ static void DefaultHandler(int signr){
 	SigHandler(SIGXFSZ, SIG_IGN);
 	SigHandler(SIGPWR, SIG_IGN);
 
-	SaveMapOn = (signr == SIGQUIT) || (signr == SIGTERM) || (signr == SIGPWR);
+	// Save map on SIGINT (Ctrl+C), SIGQUIT, SIGTERM, and SIGPWR
+	SaveMapOn = (signr == SIGINT) || (signr == SIGQUIT) || (signr == SIGTERM) || (signr == SIGPWR);
 	if(signr == SIGTERM){
 		int Hour, Minute;
 		GetRealTime(&Hour, &Minute);
@@ -508,7 +509,10 @@ static bool DaemonInit(bool NoFork){
 	}
 
 	umask(0177);
-	chdir(SAVEPATH);
+	if(chdir(SAVEPATH) != 0){
+		error("DaemonInit: Kann nicht nach %s wechseln.\n", SAVEPATH);
+		return true;
+	}
 
 	int OpenMax = sysconf(_SC_OPEN_MAX);
 	if(OpenMax < 0){

@@ -19,6 +19,7 @@ static int MaxHouseY;
 
 static TQueryManagerConnection *QueryManagerConnection;
 static int PaymentExtension;
+extern TQueryManagerConnectionPool QueryManagerConnectionPool;
 
 THouse::THouse(void) : Subowner(0, 4, 5), Guest(0, 9, 10) {
 	this->ID = 0;
@@ -1134,6 +1135,72 @@ bool TransferHouses(void){
 
 	DeleteObject(TempDepot);
 	return true;
+}
+
+bool SetHouseOwner(uint16 HouseID, uint32 OwnerID, const char *OwnerName, int TimeStamp, int PaidUntil){
+	THouse *House = GetHouse(HouseID);
+	if(House == NULL){
+		error("SetHouseOwner: Haus mit ID %d existiert nicht.\n", HouseID);
+		return false;
+	}
+
+	TQueryManagerPoolConnection QueryConnection(&QueryManagerConnectionPool);
+	if(!QueryConnection){
+		error("SetHouseOwner: Keine Query-Manager-Verbindung verfügbar.\n");
+		return false;
+	}
+
+	// Set owner in memory
+	House->OwnerID = OwnerID;
+	if(OwnerName != NULL){
+		strncpy(House->OwnerName, OwnerName, sizeof(House->OwnerName) - 1);
+		House->OwnerName[sizeof(House->OwnerName) - 1] = '\0';
+	}
+	House->LastTransition = TimeStamp;
+	House->PaidUntil = PaidUntil;
+
+	// Immediately persist to database
+	if(QueryConnection->insertHouseOwner(HouseID, OwnerID, PaidUntil) != 0){
+		error("SetHouseOwner: Kann Haus %d nicht in Datenbank eintragen.\n", HouseID);
+		return false;
+	}
+
+	Log("houses", "Haus %d sofort an Spieler %u vergeben (bis %d).\n", HouseID, OwnerID, PaidUntil);
+	return true;
+}
+
+bool RemoveHouseOwner(uint16 HouseID){
+	THouse *House = GetHouse(HouseID);
+	if(House == NULL){
+		error("RemoveHouseOwner: Haus mit ID %d existiert nicht.\n", HouseID);
+		return false;
+	}
+
+	TQueryManagerPoolConnection QueryConnection(&QueryManagerConnectionPool);
+	if(!QueryConnection){
+		error("RemoveHouseOwner: Keine Query-Manager-Verbindung verfügbar.\n");
+		return false;
+	}
+
+	// Remove from database
+	if(QueryConnection->deleteHouseOwner(HouseID) != 0){
+		error("RemoveHouseOwner: Kann Haus %d nicht aus Datenbank entfernen.\n", HouseID);
+		return false;
+	}
+
+	Log("houses", "Haus %d Besitzer aus Datenbank entfernt.\n", HouseID);
+	return true;
+}
+
+int CountHousesOwnedByAccount(uint32 AccountID, bool isGuildHouse){
+	int Count = 0;
+	for(int HouseNr = 0; HouseNr < Houses; HouseNr += 1){
+		THouse *H = House.at(HouseNr);
+		if(H->OwnerID == AccountID && H->GuildHouse == isGuildHouse){
+			Count += 1;
+		}
+	}
+	return Count;
 }
 
 bool EvictFreeAccounts(void){

@@ -3,3 +3,5 @@ bin
 build
 local
 *.log
+reboot-daily
+.tibia

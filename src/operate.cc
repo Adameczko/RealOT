@@ -2928,7 +2928,14 @@ void RefreshMap(void){
 
 					const char *Identifier = Script.getIdentifier();
 					if(strcmp(Identifier, "refresh") == 0){
-						Refreshable = true;
+						// Check if this tile is a house tile
+						int AbsX = (SectorX * 32) + OffsetX;
+						int AbsY = (SectorY * 32) + OffsetY;
+						int AbsZ = SectorZ;
+						// Don't refresh house tiles to preserve player items
+						if(GetHouseID(AbsX, AbsY, AbsZ) == 0){
+							Refreshable = true;
+						}
 					}else if(strcmp(Identifier, "content") == 0){
 						Script.readSymbol('=');
 						if(Refreshable){
